@@ -49,21 +49,30 @@ export function createWebServer(cdpManager, responseMonitor, opts = {}) {
 
     // ── API: Send message to cascade ──────────────────
     app.post('/send/:id', async (req, res) => {
-        const cascade = cdpManager.cascades.get(req.params.id);
-        if (!cascade) {
-            return res.status(404).json({ ok: false, reason: 'Cascade not found' });
-        }
+        console.log(`📨 POST /send/${req.params.id} body:`, JSON.stringify(req.body).substring(0, 100));
+        try {
+            const cascade = cdpManager.cascades.get(req.params.id);
+            if (!cascade) {
+                console.log('📨 Cascade not found');
+                return res.status(404).json({ ok: false, reason: 'Cascade not found' });
+            }
 
-        const { message } = req.body;
-        if (!message) {
-            return res.status(400).json({ ok: false, reason: 'No message provided' });
-        }
+            const { message } = req.body;
+            if (!message) {
+                console.log('📨 No message in body');
+                return res.status(400).json({ ok: false, reason: 'No message provided' });
+            }
 
-        const result = await cdpManager.injectMessage(cascade.cdp, message);
-        if (result.ok) {
-            res.json({ ok: true, method: result.method });
-        } else {
-            res.status(500).json({ ok: false, reason: result.reason });
+            const result = await cdpManager.injectMessage(cascade.cdp, message);
+            console.log(`📨 Inject result:`, result);
+            if (result.ok) {
+                res.json({ ok: true, method: result.method });
+            } else {
+                res.status(500).json({ ok: false, reason: result.reason });
+            }
+        } catch (err) {
+            console.error('📨 Send error:', err);
+            res.status(500).json({ ok: false, reason: err.message || 'Server error' });
         }
     });
 

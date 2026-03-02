@@ -168,26 +168,46 @@
     // ── Send ───────────────────────────────────────
     let isSending = false;
     async function sendMessage() {
-        if (isSending) return; // prevent double-fire from click+touchend+onclick
+        if (isSending) return;
         const input = $('messageInput');
         const btn = $('sendBtn');
         if (!input) { showToast('❌ Input not found'); return; }
-        if (!currentCascadeId) { showToast('❌ No project selected — tap a workspace first'); return; }
+        if (!currentCascadeId) { showToast('❌ No project selected'); return; }
         const text = input.value.trim();
-        if (!text) return; // silent when empty (prevents toast spam from multi-fire)
+        if (!text) return;
         isSending = true;
         if (btn) btn.disabled = true;
         showToast('📤 Sending...');
         requestNotifications();
         try {
-            const res = await fetch(`/send/${currentCascadeId}`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: text })
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 15000);
+            const url = `/send/${currentCascadeId}`;
+            console.log('[AG] Sending to', url, text.substring(0, 50));
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: text }),
+                signal: controller.signal
             });
-            const data = await res.json();
-            if (data.ok) { input.value = ''; input.style.height = 'auto'; showToast('✅ Sent!'); }
-            else showToast(`❌ ${data.reason || 'Send failed'}`);
-        } catch (err) { showToast('❌ ' + (err.message || 'Connection error')); }
+            clearTimeout(timeout);
+            console.log('[AG] Response status:', res.status);
+            const raw = await res.text();
+            console.log('[AG] Response body:', raw.substring(0, 200));
+            let data;
+            try { data = JSON.parse(raw); } catch { data = { ok: false, reason: raw.substring(0, 100) }; }
+            if (data.ok) {
+                input.value = '';
+                input.style.height = 'auto';
+                showToast('✅ Sent!');
+            } else {
+                showToast(`❌ ${data.reason || 'Send failed'}`);
+            }
+        } catch (err) {
+            const msg = err.name === 'AbortError' ? 'Request timed out (15s)' : (err.message || 'Connection error');
+            showToast('❌ ' + msg);
+            console.error('[AG] Send error:', err);
+        }
         if (btn) btn.disabled = false;
         isSending = false;
     }
