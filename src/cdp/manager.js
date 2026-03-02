@@ -264,19 +264,22 @@ export class CDPManager extends EventEmitter {
                 return { ok: false, reason: focusVal?.reason || 'focus failed' };
             }
 
-            // Step 2: Type each character using CDP Input.dispatchKeyEvent
-            // This creates real browser-level key events that React recognizes
-            for (const char of text) {
-                await cdp.call('Input.dispatchKeyEvent', {
-                    type: 'keyDown',
-                    key: char,
-                    text: char,
-                    unmodifiedText: char,
-                });
-                await cdp.call('Input.dispatchKeyEvent', {
-                    type: 'keyUp',
-                    key: char,
-                });
+            // Step 2: Insert text instantly via CDP Input.insertText (fast!)
+            // This simulates a paste and triggers React's input handlers
+            try {
+                await cdp.call('Input.insertText', { text });
+                console.log(`💉 Text inserted via Input.insertText`);
+            } catch {
+                // Fallback: type char-by-char (slower but more compatible)
+                console.log(`💉 insertText failed, falling back to char-by-char...`);
+                for (const char of text) {
+                    await cdp.call('Input.dispatchKeyEvent', {
+                        type: 'keyDown', key: char, text: char, unmodifiedText: char,
+                    });
+                    await cdp.call('Input.dispatchKeyEvent', {
+                        type: 'keyUp', key: char,
+                    });
+                }
             }
 
             // Step 3: Small delay to let React process the input and enable Send button
@@ -310,18 +313,12 @@ export class CDPManager extends EventEmitter {
             // Step 5: Fallback — press Enter via CDP (real keystroke)
             console.log(`💉 Send button not found/disabled, pressing Enter...`);
             await cdp.call('Input.dispatchKeyEvent', {
-                type: 'keyDown',
-                key: 'Enter',
-                code: 'Enter',
-                windowsVirtualKeyCode: 13,
-                nativeVirtualKeyCode: 13,
+                type: 'keyDown', key: 'Enter', code: 'Enter',
+                windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13,
             });
             await cdp.call('Input.dispatchKeyEvent', {
-                type: 'keyUp',
-                key: 'Enter',
-                code: 'Enter',
-                windowsVirtualKeyCode: 13,
-                nativeVirtualKeyCode: 13,
+                type: 'keyUp', key: 'Enter', code: 'Enter',
+                windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13,
             });
 
             console.log(`💉 Sent via Enter key`);
