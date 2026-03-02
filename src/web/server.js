@@ -18,7 +18,7 @@ export function createWebServer(cdpManager, responseMonitor, opts = {}) {
     const wss = new WebSocketServer({ server });
 
     app.use(express.json());
-    app.use(express.static(join(__dirname, '../../public')));
+    app.use(express.static(join(__dirname, '../../public'), { maxAge: 0, etag: false }));
 
     // ── API: Get cascade list ─────────────────────────
     app.get('/cascades', (req, res) => {
