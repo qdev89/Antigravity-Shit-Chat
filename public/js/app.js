@@ -169,10 +169,11 @@
     async function sendMessage() {
         const input = $('messageInput');
         const btn = $('sendBtn');
-        if (!input || !currentCascadeId) return;
+        if (!input) { showToast('❌ Input not found'); return; }
+        if (!currentCascadeId) { showToast('❌ No project selected — tap a workspace first'); return; }
         const text = input.value.trim();
-        if (!text) return;
-        btn.disabled = true;
+        if (!text) { showToast('💬 Type a message first'); return; }
+        if (btn) btn.disabled = true;
         showToast('📤 Sending...');
         requestNotifications();
         try {
@@ -182,9 +183,9 @@
             });
             const data = await res.json();
             if (data.ok) { input.value = ''; input.style.height = 'auto'; showToast('✅ Sent!'); }
-            else showToast(`❌ ${data.reason || 'Failed'}`);
-        } catch { showToast('❌ Connection error'); }
-        btn.disabled = false;
+            else showToast(`❌ ${data.reason || 'Send failed'}`);
+        } catch (err) { showToast('❌ Connection error: ' + (err.message || '')); }
+        if (btn) btn.disabled = false;
     }
 
     // ── Actions ────────────────────────────────────
@@ -278,19 +279,26 @@
         connect();
         startAutoRefresh();
 
-        // Event listeners
-        $('sendBtn')?.addEventListener('click', sendMessage);
-        $('messageInput')?.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
-        });
-        $('messageInput')?.addEventListener('input', function () {
-            this.style.height = 'auto';
-            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
-        });
+        // Event listeners — click + touchend for mobile reliability
+        const sendBtn = $('sendBtn');
+        const msgInput = $('messageInput');
+        if (sendBtn) {
+            sendBtn.addEventListener('click', sendMessage);
+            sendBtn.addEventListener('touchend', (e) => { e.preventDefault(); sendMessage(); });
+        }
+        if (msgInput) {
+            msgInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+            });
+            msgInput.addEventListener('input', function () {
+                this.style.height = 'auto';
+                this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+            });
+        }
 
-        // Expose API
+        // Expose API (including sendMessage for onclick fallback)
         window.AG = {
-            selectCascade, toggleTheme, takeScreenshot, stopAgent,
+            selectCascade, sendMessage, toggleTheme, takeScreenshot, stopAgent,
             showAddWorkspace, closeAddWorkspace, addWorkspace,
             toggleRightPanel, switchNav, toggleSidebar
         };

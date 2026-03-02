@@ -225,8 +225,9 @@
 
         <!-- Input -->
         <div class="input-bar">
-            <textarea id="messageInput" placeholder="Send a message to Antigravity..." rows="1"></textarea>
-            <button class="send-btn" id="sendBtn" title="Send">▶</button>
+            <textarea id="messageInput" placeholder="Send a message to Antigravity..." rows="1"
+                onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();window.AG?.sendMessage()}"></textarea>
+            <button class="send-btn" id="sendBtn" title="Send" onclick="window.AG?.sendMessage()">▶</button>
         </div>
     </main>
 
