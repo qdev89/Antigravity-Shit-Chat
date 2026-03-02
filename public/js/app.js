@@ -166,13 +166,16 @@
     }
 
     // ── Send ───────────────────────────────────────
+    let isSending = false;
     async function sendMessage() {
+        if (isSending) return; // prevent double-fire from click+touchend+onclick
         const input = $('messageInput');
         const btn = $('sendBtn');
         if (!input) { showToast('❌ Input not found'); return; }
         if (!currentCascadeId) { showToast('❌ No project selected — tap a workspace first'); return; }
         const text = input.value.trim();
-        if (!text) { showToast('💬 Type a message first'); return; }
+        if (!text) return; // silent when empty (prevents toast spam from multi-fire)
+        isSending = true;
         if (btn) btn.disabled = true;
         showToast('📤 Sending...');
         requestNotifications();
@@ -184,8 +187,9 @@
             const data = await res.json();
             if (data.ok) { input.value = ''; input.style.height = 'auto'; showToast('✅ Sent!'); }
             else showToast(`❌ ${data.reason || 'Send failed'}`);
-        } catch (err) { showToast('❌ Connection error: ' + (err.message || '')); }
+        } catch (err) { showToast('❌ ' + (err.message || 'Connection error')); }
         if (btn) btn.disabled = false;
+        isSending = false;
     }
 
     // ── Actions ────────────────────────────────────
@@ -279,12 +283,11 @@
         connect();
         startAutoRefresh();
 
-        // Event listeners — click + touchend for mobile reliability
+        // Event listeners (onclick on HTML handles mobile fallback)
         const sendBtn = $('sendBtn');
         const msgInput = $('messageInput');
         if (sendBtn) {
             sendBtn.addEventListener('click', sendMessage);
-            sendBtn.addEventListener('touchend', (e) => { e.preventDefault(); sendMessage(); });
         }
         if (msgInput) {
             msgInput.addEventListener('keydown', (e) => {
