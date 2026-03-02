@@ -234,61 +234,99 @@ export class CDPManager extends EventEmitter {
     }
 
     async injectMessage(cdp, text) {
-        const escaped = text.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '');
-        const SCRIPT = `(() => {
-            try {
-                const editor = document.querySelector('[contenteditable="true"]') || document.querySelector('textarea');
-                if (!editor) return { ok: false, reason: "no editor found" };
+        console.log(`💉 Injecting message (${text.length} chars)...`);
 
-                editor.focus();
-
-                if (editor.tagName === 'TEXTAREA') {
-                    const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
-                    setter.call(editor, "${escaped}");
-                    editor.dispatchEvent(new Event('input', { bubbles: true }));
-                } else {
-                    // For contenteditable: use input events which Antigravity's React listens to
-                    editor.textContent = '';
-                    editor.focus();
-                    
-                    // Use insertText command which fires proper input events
-                    document.execCommand("insertText", false, "${escaped}");
-                }
-
-                // Find and click send button
-                const btn = document.querySelector('button[class*="arrow"]')
-                    || document.querySelector('button[aria-label*="Send"]')
-                    || document.querySelector('button[type="submit"]');
-
-                if (btn && !btn.disabled) {
-                    btn.click();
-                    return { ok: true, method: "button" };
-                }
-
-                // Fallback: Enter key
-                editor.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", code: "Enter", keyCode: 13, bubbles: true }));
-                editor.dispatchEvent(new KeyboardEvent("keypress", { key: "Enter", code: "Enter", keyCode: 13, bubbles: true }));
-                editor.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter", code: "Enter", keyCode: 13, bubbles: true }));
-                return { ok: true, method: "enter" };
-            } catch (e) {
-                return { ok: false, reason: e.message };
-            }
-        })()`;
-
-        console.log(`💉 Injecting message (${text.length} chars) into context ${cdp.rootContextId}...`);
         try {
-            const res = await cdp.call('Runtime.evaluate', {
-                expression: SCRIPT,
+            // Step 1: Focus the editor and clear it
+            const focusResult = await cdp.call('Runtime.evaluate', {
+                expression: `(() => {
+                    const editor = document.querySelector('[contenteditable="true"]')
+                        || document.querySelector('textarea');
+                    if (!editor) return { ok: false, reason: "no editor found" };
+                    editor.focus();
+                    // Clear existing text
+                    if (editor.tagName === 'TEXTAREA') {
+                        editor.value = '';
+                    } else {
+                        // Select all and delete for contenteditable
+                        document.execCommand('selectAll', false, null);
+                        document.execCommand('delete', false, null);
+                    }
+                    return { ok: true, tag: editor.tagName };
+                })()`,
                 returnByValue: true,
                 contextId: cdp.rootContextId
             });
-            const val = res.result?.value;
-            console.log(`💉 Injection result:`, JSON.stringify(val));
-            if (res.exceptionDetails) {
-                console.error('💉 Exception:', res.exceptionDetails.text);
-                return { ok: false, reason: res.exceptionDetails.text || 'script exception' };
+
+            const focusVal = focusResult.result?.value;
+            if (!focusVal?.ok) {
+                console.log(`💉 Focus failed:`, focusVal);
+                return { ok: false, reason: focusVal?.reason || 'focus failed' };
             }
-            return val || { ok: false, reason: 'no result returned' };
+
+            // Step 2: Type each character using CDP Input.dispatchKeyEvent
+            // This creates real browser-level key events that React recognizes
+            for (const char of text) {
+                await cdp.call('Input.dispatchKeyEvent', {
+                    type: 'keyDown',
+                    key: char,
+                    text: char,
+                    unmodifiedText: char,
+                });
+                await cdp.call('Input.dispatchKeyEvent', {
+                    type: 'keyUp',
+                    key: char,
+                });
+            }
+
+            // Step 3: Small delay to let React process the input and enable Send button
+            await new Promise(r => setTimeout(r, 300));
+
+            // Step 4: Try clicking the enabled Send button first
+            const sendResult = await cdp.call('Runtime.evaluate', {
+                expression: `(() => {
+                    // Look for Send button - try multiple selectors
+                    const btns = document.querySelectorAll('button');
+                    for (const b of btns) {
+                        const text = (b.innerText || '').trim().toLowerCase();
+                        const label = (b.getAttribute('aria-label') || '').toLowerCase();
+                        if ((text === 'send' || label.includes('send')) && !b.disabled) {
+                            b.click();
+                            return { ok: true, method: 'button', label: b.innerText };
+                        }
+                    }
+                    return { ok: false, reason: 'no enabled send button' };
+                })()`,
+                returnByValue: true,
+                contextId: cdp.rootContextId
+            });
+
+            const sendVal = sendResult.result?.value;
+            if (sendVal?.ok) {
+                console.log(`💉 Sent via button click`);
+                return sendVal;
+            }
+
+            // Step 5: Fallback — press Enter via CDP (real keystroke)
+            console.log(`💉 Send button not found/disabled, pressing Enter...`);
+            await cdp.call('Input.dispatchKeyEvent', {
+                type: 'keyDown',
+                key: 'Enter',
+                code: 'Enter',
+                windowsVirtualKeyCode: 13,
+                nativeVirtualKeyCode: 13,
+            });
+            await cdp.call('Input.dispatchKeyEvent', {
+                type: 'keyUp',
+                key: 'Enter',
+                code: 'Enter',
+                windowsVirtualKeyCode: 13,
+                nativeVirtualKeyCode: 13,
+            });
+
+            console.log(`💉 Sent via Enter key`);
+            return { ok: true, method: 'enter' };
+
         } catch (e) {
             console.error('💉 CDP error:', e.message || e);
             return { ok: false, reason: e.message || String(e) };

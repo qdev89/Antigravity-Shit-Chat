@@ -11,7 +11,9 @@
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
         rel="stylesheet">
     <style>
-        :root {
+        /* ── Dark Theme (default) ───────────────────── */
+        :root,
+        [data-theme="dark"] {
             --bg-primary: #08080c;
             --bg-secondary: #0e0e14;
             --bg-tertiary: #14141c;
@@ -30,9 +32,33 @@
             --warning: #fbbf24;
             --danger: #f87171;
             --streaming: #60a5fa;
+            --shadow: rgba(0, 0, 0, 0.4);
             --sidebar-width: 280px;
             --topbar-height: 56px;
             --input-height: 72px;
+        }
+
+        /* ── Light Theme ────────────────────────────── */
+        [data-theme="light"] {
+            --bg-primary: #f5f5f7;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #f0f0f4;
+            --bg-card: #ffffff;
+            --bg-hover: #eeeef2;
+            --bg-active: #e4e4ec;
+            --border: #d8d8e0;
+            --border-hover: #c8c8d4;
+            --text-primary: #1a1a2e;
+            --text-secondary: #5c5c78;
+            --text-muted: #9090a8;
+            --accent: #6c4ce8;
+            --accent-hover: #5a3ad6;
+            --accent-glow: rgba(108, 76, 232, 0.12);
+            --success: #16a34a;
+            --warning: #d97706;
+            --danger: #dc2626;
+            --streaming: #2563eb;
+            --shadow: rgba(0, 0, 0, 0.08);
         }
 
         * {
@@ -477,15 +503,38 @@
         }
 
         .chat-mirror strong {
-            color: #fff !important;
+            color: var(--text-primary) !important;
+            font-weight: 700 !important;
         }
 
         .chat-mirror h1,
         .chat-mirror h2,
         .chat-mirror h3 {
-            color: #fff !important;
+            color: var(--text-primary) !important;
             margin-top: 20px !important;
             margin-bottom: 8px !important;
+        }
+
+        /* ── Theme Toggle ────────────────────────────── */
+        .theme-btn {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+            line-height: 1;
+        }
+
+        .theme-btn:hover {
+            color: var(--text-primary);
+            background: var(--bg-hover);
+            border-color: var(--border-hover);
         }
 
         /* ── Notification Toast ───────────────────────── */
@@ -499,7 +548,7 @@
             padding: 12px 16px;
             font-size: 13px;
             color: var(--text-primary);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 8px 32px var(--shadow);
             transform: translateY(20px);
             opacity: 0;
             transition: all 0.3s ease;
@@ -654,6 +703,7 @@
                 <span id="statusText">Idle</span>
             </div>
             <div class="topbar-actions">
+                <button class="theme-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">🌙</button>
                 <button class="action-btn" onclick="takeScreenshot()" title="Screenshot">📸</button>
                 <button class="action-btn danger" onclick="stopAgent()" title="Stop">⏹ Stop</button>
             </div>
@@ -700,6 +750,29 @@
     <div class="toast" id="toast"></div>
 
     <script>
+        // ── Theme ─────────────────────────────────────────
+        function initTheme() {
+            const saved = localStorage.getItem('ag-theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const theme = saved || (prefersDark ? 'dark' : 'light');
+            setTheme(theme);
+        }
+
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('ag-theme', theme);
+            const btn = document.getElementById('themeBtn');
+            if (btn) btn.textContent = theme === 'dark' ? '☀️' : '🌙';
+        }
+
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme') || 'dark';
+            setTheme(current === 'dark' ? 'light' : 'dark');
+        }
+
+        // Init theme before DOM renders to avoid flash
+        initTheme();
+
         // ── State ──────────────────────────────────────────
         let cascades = [];
         let currentCascadeId = null;
@@ -717,6 +790,7 @@
         const statusBadge = $('statusBadge');
         const statusText = $('statusText');
         const connectionBadge = $('connectionBadge');
+
 
         // ── WebSocket ──────────────────────────────────────
         function connect() {
