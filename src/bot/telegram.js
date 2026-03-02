@@ -285,35 +285,67 @@ export class TelegramBot {
             if (!chatId) return;
 
             try {
+                const projectName = this._shortTitle(event.cascade.metadata.chatTitle);
+
                 switch (event.phase) {
                     case PHASE.STREAMING:
-                        if (event.prevPhase === PHASE.IDLE || event.prevPhase === PHASE.THINKING) {
+                        if (event.prevPhase === PHASE.IDLE) {
                             await this.bot.api.sendMessage(chatId,
-                                `⚡ Agent started working on: ${event.cascade.metadata.chatTitle}`
+                                `⚡ Agent started working\n📁 ${projectName}`
                             );
                         }
                         break;
 
                     case PHASE.COMPLETE: {
-                        // Send completion + last message preview (plain text for reliability)
-                        let msg = `✅ Task complete — ${event.cascade.metadata.chatTitle}\n`;
+                        // Send completion with preview + quick action keyboard
+                        let msg = `✅ Task complete\n📁 ${projectName}`;
                         if (event.message) {
-                            const preview = event.message.substring(0, 800);
-                            msg += `\n${preview}`;
+                            const preview = event.message.substring(0, 600);
+                            msg += `\n\n${preview}`;
                         }
-                        // Telegram has 4096 char limit
-                        await this.bot.api.sendMessage(chatId, msg.substring(0, 4000));
+
+                        const keyboard = new InlineKeyboard()
+                            .text('📸 Screenshot', `action:screenshot:${event.cascadeId}`)
+                            .text('🔄 Follow Up', `action:followup:${event.cascadeId}`);
+
+                        await this.bot.api.sendMessage(chatId, msg.substring(0, 4000), {
+                            reply_markup: keyboard
+                        });
                         break;
                     }
-
-                    case PHASE.ERROR:
-                        await this.bot.api.sendMessage(chatId,
-                            `❌ Error detected in ${event.cascade.metadata.chatTitle}`
-                        );
-                        break;
                 }
             } catch (e) {
                 console.error('Telegram notification error:', e.message);
+            }
+        });
+
+        // Handle quick action buttons
+        this.bot.callbackQuery(/^action:(\w+):(.+)$/, async (ctx) => {
+            const action = ctx.match[1];
+            const cascadeId = ctx.match[2];
+            const cascade = this.cdp.cascades.get(cascadeId);
+
+            if (!cascade) {
+                await ctx.answerCallbackQuery({ text: 'Cascade disconnected' });
+                return;
+            }
+
+            switch (action) {
+                case 'screenshot': {
+                    await ctx.answerCallbackQuery({ text: 'Capturing...' });
+                    const png = await this.cdp.captureScreenshot(cascade.cdp);
+                    if (png) {
+                        await ctx.replyWithPhoto(new InputFile(png, 'screenshot.png'));
+                    } else {
+                        await ctx.reply('❌ Screenshot failed');
+                    }
+                    break;
+                }
+                case 'followup':
+                    this._activeCascadeId = cascadeId;
+                    await ctx.answerCallbackQuery({ text: 'Ready for follow-up' });
+                    await ctx.reply(`💬 Reply with your follow-up message for ${this._shortTitle(cascade.metadata.chatTitle)}`);
+                    break;
             }
         });
     }
@@ -324,6 +356,12 @@ export class TelegramBot {
             if (c) return c;
         }
         return this.cdp.getActiveCascade();
+    }
+
+    _shortTitle(title) {
+        if (!title) return 'Untitled';
+        const parts = title.split(' - ');
+        return parts[0] || title;
     }
 
     _escMd(text) {
