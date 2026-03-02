@@ -6,1123 +6,303 @@
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>AG Mission Control</title>
+    <meta name="description" content="Premium remote dashboard for managing Antigravity IDE instances">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
         rel="stylesheet">
-    <style>
-        /* ── Dark Theme (default) ───────────────────── */
-        :root,
-        [data-theme="dark"] {
-            --bg-primary: #08080c;
-            --bg-secondary: #0e0e14;
-            --bg-tertiary: #14141c;
-            --bg-card: #161620;
-            --bg-hover: #1c1c28;
-            --bg-active: #222230;
-            --border: #1e1e2a;
-            --border-hover: #2a2a3a;
-            --text-primary: #e8e8f0;
-            --text-secondary: #8888a0;
-            --text-muted: #555568;
-            --accent: #7c5cfc;
-            --accent-hover: #9070ff;
-            --accent-glow: rgba(124, 92, 252, 0.15);
-            --success: #34d399;
-            --warning: #fbbf24;
-            --danger: #f87171;
-            --streaming: #60a5fa;
-            --shadow: rgba(0, 0, 0, 0.4);
-            --sidebar-width: 280px;
-            --topbar-height: 56px;
-            --input-height: 72px;
-        }
-
-        /* ── Light Theme ────────────────────────────── */
-        [data-theme="light"] {
-            --bg-primary: #f5f5f7;
-            --bg-secondary: #ffffff;
-            --bg-tertiary: #f0f0f4;
-            --bg-card: #ffffff;
-            --bg-hover: #eeeef2;
-            --bg-active: #e4e4ec;
-            --border: #d8d8e0;
-            --border-hover: #c8c8d4;
-            --text-primary: #1a1a2e;
-            --text-secondary: #5c5c78;
-            --text-muted: #9090a8;
-            --accent: #6c4ce8;
-            --accent-hover: #5a3ad6;
-            --accent-glow: rgba(108, 76, 232, 0.12);
-            --success: #16a34a;
-            --warning: #d97706;
-            --danger: #dc2626;
-            --streaming: #2563eb;
-            --shadow: rgba(0, 0, 0, 0.08);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            height: 100vh;
-            height: 100dvh;
-            overflow: hidden;
-            display: flex;
-        }
-
-        /* ── Sidebar ─────────────────────────────────── */
-        .sidebar {
-            width: var(--sidebar-width);
-            background: var(--bg-secondary);
-            border-right: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            flex-shrink: 0;
-            transition: transform 0.3s ease;
-            z-index: 100;
-        }
-
-        .sidebar-header {
-            padding: 16px 20px;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .sidebar-logo {
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            background: linear-gradient(135deg, var(--accent), #a855f7);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-            font-weight: 700;
-        }
-
-        .sidebar-title {
-            font-size: 15px;
-            font-weight: 600;
-            letter-spacing: -0.3px;
-        }
-
-        .sidebar-subtitle {
-            font-size: 11px;
-            color: var(--text-muted);
-            font-weight: 400;
-        }
-
-        .sidebar-section-label {
-            padding: 20px 20px 8px;
-            font-size: 11px;
-            font-weight: 600;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-        }
-
-        .cascade-list {
-            flex: 1;
-            overflow-y: auto;
-            padding: 4px 8px;
-        }
-
-        .cascade-item {
-            padding: 10px 12px;
-            border-radius: 8px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            transition: all 0.15s ease;
-            margin-bottom: 2px;
-        }
-
-        .cascade-item:hover {
-            background: var(--bg-hover);
-        }
-
-        .cascade-item.active {
-            background: var(--bg-active);
-        }
-
-        .cascade-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            flex-shrink: 0;
-            transition: all 0.3s ease;
-        }
-
-        .cascade-dot.idle {
-            background: var(--text-muted);
-        }
-
-        .cascade-dot.streaming {
-            background: var(--streaming);
-            box-shadow: 0 0 8px var(--streaming);
-            animation: pulse 1.5s ease-in-out infinite;
-        }
-
-        .cascade-dot.complete {
-            background: var(--success);
-        }
-
-        @keyframes pulse {
-
-            0%,
-            100% {
-                opacity: 1;
-            }
-
-            50% {
-                opacity: 0.5;
-            }
-        }
-
-        .cascade-info {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .cascade-name {
-            font-size: 13px;
-            font-weight: 500;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .cascade-meta {
-            font-size: 11px;
-            color: var(--text-muted);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .sidebar-footer {
-            padding: 12px 16px;
-            border-top: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .connection-badge {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 11px;
-            color: var(--text-muted);
-            padding: 4px 10px;
-            border-radius: 12px;
-            background: var(--bg-tertiary);
-        }
-
-        .connection-badge .dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: var(--success);
-        }
-
-        .connection-badge.disconnected .dot {
-            background: var(--danger);
-        }
-
-        /* ── Main Area ───────────────────────────────── */
-        .main {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            min-width: 0;
-        }
-
-        .topbar {
-            height: var(--topbar-height);
-            background: var(--bg-secondary);
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            padding: 0 20px;
-            gap: 12px;
-            flex-shrink: 0;
-        }
-
-        .menu-btn {
-            display: none;
-            background: none;
-            border: none;
-            color: var(--text-secondary);
-            font-size: 20px;
-            cursor: pointer;
-            padding: 4px;
-        }
-
-        .topbar-title {
-            font-size: 14px;
-            font-weight: 600;
-            flex: 1;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .status-badge {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: 500;
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .status-badge.idle {
-            color: var(--text-muted);
-        }
-
-        .status-badge.streaming {
-            color: var(--streaming);
-            border-color: rgba(96, 165, 250, 0.3);
-            background: rgba(96, 165, 250, 0.08);
-        }
-
-        .status-badge.complete {
-            color: var(--success);
-            border-color: rgba(52, 211, 153, 0.3);
-            background: rgba(52, 211, 153, 0.08);
-        }
-
-        .topbar-actions {
-            display: flex;
-            gap: 4px;
-        }
-
-        .action-btn {
-            background: none;
-            border: 1px solid var(--border);
-            color: var(--text-secondary);
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-size: 12px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            transition: all 0.15s ease;
-            font-family: inherit;
-        }
-
-        .action-btn:hover {
-            color: var(--text-primary);
-            background: var(--bg-hover);
-            border-color: var(--border-hover);
-        }
-
-        .action-btn.danger:hover {
-            color: var(--danger);
-            border-color: rgba(248, 113, 113, 0.3);
-            background: rgba(248, 113, 113, 0.08);
-        }
-
-        /* ── Chat Area ───────────────────────────────── */
-        .chat-area {
-            flex: 1;
-            overflow-y: auto;
-            position: relative;
-            scroll-behavior: smooth;
-        }
-
-        .chat-content {
-            padding: 24px;
-            min-height: 100%;
-        }
-
-        .chat-mirror {
-            font-size: 14px;
-            line-height: 1.7;
-        }
-
-        .empty-state {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            color: var(--text-muted);
-            gap: 16px;
-            padding: 40px;
-            text-align: center;
-        }
-
-        .empty-state-icon {
-            font-size: 48px;
-            opacity: 0.4;
-        }
-
-        .empty-state-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: var(--text-secondary);
-        }
-
-        .empty-state-desc {
-            font-size: 13px;
-            line-height: 1.6;
-            max-width: 400px;
-        }
-
-        /* ── Input Bar ───────────────────────────────── */
-        .input-bar {
-            padding: 12px 20px;
-            padding-bottom: calc(12px + env(safe-area-inset-bottom));
-            border-top: 1px solid var(--border);
-            background: var(--bg-secondary);
-            flex-shrink: 0;
-        }
-
-        .input-wrapper {
-            display: flex;
-            gap: 8px;
-            align-items: flex-end;
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 4px 4px 4px 16px;
-            transition: border-color 0.2s ease;
-        }
-
-        .input-wrapper:focus-within {
-            border-color: var(--accent);
-            box-shadow: 0 0 0 3px var(--accent-glow);
-        }
-
-        .input-wrapper textarea {
-            flex: 1;
-            background: none;
-            border: none;
-            color: var(--text-primary);
-            font-family: inherit;
-            font-size: 14px;
-            resize: none;
-            outline: none;
-            padding: 8px 0;
-            min-height: 20px;
-            max-height: 120px;
-            line-height: 1.5;
-        }
-
-        .input-wrapper textarea::placeholder {
-            color: var(--text-muted);
-        }
-
-        .send-btn {
-            width: 36px;
-            height: 36px;
-            border-radius: 8px;
-            border: none;
-            background: var(--accent);
-            color: white;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.15s ease;
-            flex-shrink: 0;
-        }
-
-        .send-btn:hover {
-            background: var(--accent-hover);
-            transform: scale(1.05);
-        }
-
-        .send-btn:disabled {
-            opacity: 0.3;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .send-btn svg {
-            width: 16px;
-            height: 16px;
-        }
-
-        /* ── Cascade CSS Overrides ────────────────────── */
-        #cascade-style-container .chat-mirror {
-            background: transparent !important;
-        }
-
-        .chat-mirror pre,
-        .chat-mirror code {
-            background: var(--bg-tertiary) !important;
-            border: 1px solid var(--border) !important;
-            border-radius: 8px !important;
-            font-family: 'JetBrains Mono', monospace !important;
-            font-size: 13px !important;
-        }
-
-        .chat-mirror pre {
-            padding: 16px !important;
-            margin: 12px 0 !important;
-            overflow-x: auto !important;
-        }
-
-        .chat-mirror code {
-            padding: 2px 6px !important;
-            border-radius: 4px !important;
-        }
-
-        .chat-mirror pre code {
-            border: none !important;
-            padding: 0 !important;
-        }
-
-        /* Override Antigravity's prose styles for readability */
-        .chat-mirror,
-        .chat-mirror * {
-            color: var(--text-primary) !important;
-        }
-
-        .chat-mirror a {
-            color: var(--accent) !important;
-        }
-
-        .chat-mirror strong {
-            color: var(--text-primary) !important;
-            font-weight: 700 !important;
-        }
-
-        .chat-mirror h1,
-        .chat-mirror h2,
-        .chat-mirror h3 {
-            color: var(--text-primary) !important;
-            margin-top: 20px !important;
-            margin-bottom: 8px !important;
-        }
-
-        /* ── Theme Toggle ────────────────────────────── */
-        .theme-btn {
-            background: none;
-            border: 1px solid var(--border);
-            color: var(--text-secondary);
-            padding: 6px 10px;
-            border-radius: 6px;
-            font-size: 14px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.15s ease;
-            line-height: 1;
-        }
-
-        .theme-btn:hover {
-            color: var(--text-primary);
-            background: var(--bg-hover);
-            border-color: var(--border-hover);
-        }
-
-        /* ── Notification Toast ───────────────────────── */
-        .toast {
-            position: fixed;
-            bottom: 100px;
-            right: 24px;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 12px 16px;
-            font-size: 13px;
-            color: var(--text-primary);
-            box-shadow: 0 8px 32px var(--shadow);
-            transform: translateY(20px);
-            opacity: 0;
-            transition: all 0.3s ease;
-            z-index: 1000;
-            max-width: 320px;
-        }
-
-        .toast.show {
-            transform: translateY(0);
-            opacity: 1;
-        }
-
-        /* ── Screenshot Modal ─────────────────────────── */
-        .modal-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(4px);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 200;
-        }
-
-        .modal-overlay.show {
-            display: flex;
-        }
-
-        .modal-content {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 4px;
-            max-width: 90vw;
-            max-height: 90vh;
-        }
-
-        .modal-content img {
-            max-width: 100%;
-            max-height: 85vh;
-            border-radius: 8px;
-        }
-
-        .modal-close {
-            position: absolute;
-            top: 16px;
-            right: 16px;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            color: var(--text-primary);
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-        }
-
-        /* ── Responsive ──────────────────────────────── */
-        @media (max-width: 768px) {
-            .sidebar {
-                position: fixed;
-                left: 0;
-                top: 0;
-                bottom: 0;
-                transform: translateX(-100%);
-            }
-
-            .sidebar.open {
-                transform: translateX(0);
-            }
-
-            .menu-btn {
-                display: block;
-            }
-
-            .sidebar-overlay {
-                position: fixed;
-                inset: 0;
-                background: rgba(0, 0, 0, 0.5);
-                z-index: 99;
-                display: none;
-            }
-
-            .sidebar-overlay.show {
-                display: block;
-            }
-        }
-
-        /* ── Scrollbar ───────────────────────────────── */
-        ::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: var(--border);
-            border-radius: 3px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--border-hover);
-        }
-    </style>
-    <style id="cascade-style-container">
-        /* Dynamic cascade styles injected here */
-    </style>
+    <link rel="stylesheet" href="/css/styles.css">
 </head>
 
 <body>
-    <!-- Mobile sidebar overlay -->
-    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
-    <!-- Sidebar -->
+    <!-- ═══════════════════ NAV RAIL ═══════════════════ -->
+    <nav class="nav-rail">
+        <div class="nav-logo" title="AG Mission Control">AG</div>
+        <div class="nav-item active" data-panel="projects" onclick="AG.switchNav('projects')" title="Projects">📂</div>
+        <div class="nav-item" data-panel="agents" onclick="AG.switchNav('agents')" title="AI Agents">🤖</div>
+        <div class="nav-item" data-panel="history" onclick="AG.switchNav('history')" title="History">📋</div>
+        <div class="nav-item" data-panel="docs" onclick="AG.switchNav('docs')" title="Docs">📄</div>
+        <div class="nav-spacer"></div>
+        <div class="nav-item" data-panel="settings" onclick="AG.switchNav('settings')" title="Settings">⚙️</div>
+    </nav>
+
+    <!-- ═══════════════════ SIDEBAR ════════════════════ -->
     <aside class="sidebar" id="sidebar">
-        <div class="sidebar-header">
-            <div class="sidebar-logo">AG</div>
-            <div>
-                <div class="sidebar-title">Mission Control</div>
-                <div class="sidebar-subtitle">Antigravity Manager</div>
+        <!-- Projects Panel -->
+        <div class="sidebar-section" data-panel="projects"
+            style="display:block;flex:1;display:flex;flex-direction:column">
+            <div class="sidebar-header">
+                <div class="sidebar-title">Workspaces</div>
+                <input type="text" class="sidebar-search" placeholder="Search projects..." id="searchInput"
+                    oninput="document.querySelectorAll('.ws-item').forEach(i=>i.style.display=i.textContent.toLowerCase().includes(this.value.toLowerCase())?'':'none')">
+            </div>
+            <div class="sidebar-content" id="cascadeList"></div>
+            <div class="sidebar-footer">
+                <button class="add-ws-btn" onclick="AG.showAddWorkspace()">＋ Add Workspace</button>
             </div>
         </div>
 
-        <div class="sidebar-section-label">Workspaces</div>
-
-        <div class="cascade-list" id="cascadeList">
-            <div class="empty-state" style="padding: 20px;">
-                <div style="font-size: 13px; color: var(--text-muted);">Scanning for Antigravity...</div>
+        <!-- Agents Panel -->
+        <div class="sidebar-section" data-panel="agents" style="display:none;flex:1;display:flex;flex-direction:column">
+            <div class="sidebar-header">
+                <div class="sidebar-title">AI Agents</div>
+            </div>
+            <div class="sidebar-content" style="padding:16px">
+                <div class="ws-item" style="flex-direction:column;gap:6px">
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <span style="font-size:20px">🧠</span>
+                        <div>
+                            <div class="ws-name">Claude Opus 4.6</div>
+                            <div class="ws-meta">Primary agent • Fast mode</div>
+                        </div>
+                    </div>
+                    <div class="ws-tags"><span class="ws-tag">coding</span><span class="ws-tag">analysis</span><span
+                            class="ws-tag">150k ctx</span></div>
+                </div>
+                <div class="ws-item" style="flex-direction:column;gap:6px;margin-top:4px">
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <span style="font-size:20px">⚡</span>
+                        <div>
+                            <div class="ws-name">Claude Sonnet 4</div>
+                            <div class="ws-meta">Speed agent • Background</div>
+                        </div>
+                    </div>
+                    <div class="ws-tags"><span class="ws-tag">quick</span><span class="ws-tag">drafts</span><span
+                            class="ws-tag">200k ctx</span></div>
+                </div>
+                <div class="ws-item" style="flex-direction:column;gap:6px;margin-top:4px">
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <span style="font-size:20px">🔥</span>
+                        <div>
+                            <div class="ws-name">Gemini 2.5 Pro</div>
+                            <div class="ws-meta">Research • Multi-modal</div>
+                        </div>
+                    </div>
+                    <div class="ws-tags"><span class="ws-tag">vision</span><span class="ws-tag">research</span><span
+                            class="ws-tag">1M ctx</span></div>
+                </div>
+                <p style="font-size:11px;color:var(--text-muted);margin-top:16px;text-align:center">
+                    Agents are auto-detected from Antigravity config
+                </p>
             </div>
         </div>
 
-        <div class="sidebar-footer">
-            <div class="connection-badge" id="connectionBadge">
-                <div class="dot"></div>
-                <span>Connected</span>
+        <!-- History Panel -->
+        <div class="sidebar-section" data-panel="history"
+            style="display:none;flex:1;display:flex;flex-direction:column">
+            <div class="sidebar-header">
+                <div class="sidebar-title">Task History</div>
             </div>
-        </div>
-    </aside>
-
-    <!-- Main Content -->
-    <main class="main">
-        <!-- Top Bar -->
-        <div class="topbar">
-            <button class="menu-btn" onclick="toggleSidebar()">☰</button>
-            <div class="topbar-title" id="topbarTitle">AG Mission Control</div>
-            <div class="status-badge idle" id="statusBadge">
-                <span id="statusText">Idle</span>
-            </div>
-            <div class="topbar-actions">
-                <button class="theme-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">🌙</button>
-                <button class="action-btn" onclick="takeScreenshot()" title="Screenshot">📸</button>
-                <button class="action-btn danger" onclick="stopAgent()" title="Stop">⏹ Stop</button>
+            <div class="sidebar-content" style="padding:16px">
+                <div id="historyList">
+                    <p style="font-size:12px;color:var(--text-muted);text-align:center;padding:20px">
+                        📋 Task history will appear here as you send prompts
+                    </p>
+                </div>
             </div>
         </div>
 
-        <!-- Chat Area -->
-        <div class="chat-area" id="chatArea">
-            <div class="chat-content" id="chatContent">
-                <div class="empty-state">
-                    <div class="empty-state-icon">🚀</div>
-                    <div class="empty-state-title">AG Mission Control</div>
-                    <div class="empty-state-desc">
-                        Connect to Antigravity by launching it with<br>
-                        <code
-                            style="background: var(--bg-tertiary); padding: 4px 8px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; font-size: 12px;">antigravity . --remote-debugging-port=9000</code>
+        <!-- Docs Panel -->
+        <div class="sidebar-section" data-panel="docs" style="display:none;flex:1;display:flex;flex-direction:column">
+            <div class="sidebar-header">
+                <div class="sidebar-title">Documentation</div>
+            </div>
+            <div class="sidebar-content" style="padding:16px">
+                <a href="https://github.com/qdev89/Antigravity-Shit-Chat" target="_blank" class="ws-item"
+                    style="text-decoration:none;color:inherit">
+                    <span>📘</span>
+                    <div class="ws-info">
+                        <div class="ws-name">README</div>
+                        <div class="ws-meta">GitHub Repository</div>
+                    </div>
+                </a>
+                <div class="ws-item" style="cursor:default">
+                    <span>🔧</span>
+                    <div class="ws-info">
+                        <div class="ws-name">Setup Guide</div>
+                        <div class="ws-meta">Launch AG with CDP port</div>
+                    </div>
+                </div>
+                <div class="ws-item" style="cursor:default">
+                    <span>🤖</span>
+                    <div class="ws-info">
+                        <div class="ws-name">Telegram Bot</div>
+                        <div class="ws-meta">Remote control via @BotFather</div>
+                    </div>
+                </div>
+                <div class="ws-item" style="cursor:default">
+                    <span>🔌</span>
+                    <div class="ws-info">
+                        <div class="ws-name">API Reference</div>
+                        <div class="ws-meta">REST + WebSocket endpoints</div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Input Bar -->
-        <div class="input-bar">
-            <div class="input-wrapper">
-                <textarea id="messageInput" placeholder="Send a message to Antigravity..." rows="1"></textarea>
-                <button class="send-btn" id="sendBtn" onclick="sendMessage()" disabled>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
-                        stroke-linejoin="round">
-                        <line x1="22" y1="2" x2="11" y2="13"></line>
-                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                    </svg>
-                </button>
+        <!-- Settings Panel (in sidebar) -->
+        <div class="sidebar-section" data-panel="settings"
+            style="display:none;flex:1;display:flex;flex-direction:column">
+            <div class="sidebar-header">
+                <div class="sidebar-title">Settings</div>
             </div>
+            <div class="sidebar-content" style="padding:0">
+                <div class="panel-section">
+                    <div class="panel-label">Appearance</div>
+                    <div class="panel-row"><span>Theme</span>
+                        <div class="toggle" id="themeToggleSwitch"
+                            onclick="AG.toggleTheme();this.classList.toggle('on')"></div>
+                    </div>
+                </div>
+                <div class="panel-section">
+                    <div class="panel-label">Notifications</div>
+                    <div class="panel-row"><span>Browser alerts</span>
+                        <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+                    </div>
+                    <div class="panel-row"><span>Sound effects</span>
+                        <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+                    </div>
+                </div>
+                <div class="panel-section">
+                    <div class="panel-label">Connection</div>
+                    <div class="panel-row"><span>CDP Port Range</span><span class="panel-value">9000–9003</span></div>
+                    <div class="panel-row"><span>Poll Interval</span><span class="panel-value">2s / 5s</span></div>
+                    <div class="panel-row"><span>Server</span><span class="panel-value">:3000</span></div>
+                </div>
+                <div class="panel-section">
+                    <div class="panel-label">Telegram</div>
+                    <div class="panel-row"><span>Bot</span><span class="panel-value">@AG_Agent001_BOT</span></div>
+                    <div class="panel-row"><span>Status</span><span style="color:var(--success);font-size:12px">●
+                            Connected</span></div>
+                </div>
+                <div class="panel-section">
+                    <div class="panel-label">About</div>
+                    <div class="panel-row"><span>Version</span><span class="panel-value">v2.1.0</span></div>
+                    <div class="panel-row"><span>License</span><span class="panel-value">MIT</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div style="padding:8px 12px;border-top:1px solid var(--border)">
+            <div class="connection-badge" id="connectionBadge">
+                <div class="dot"></div><span>Connected</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ═══════════════════ MAIN CONTENT ═══════════════ -->
+    <main class="main">
+        <!-- Topbar -->
+        <header class="topbar">
+            <button class="action-btn mobile-menu-btn" onclick="AG.toggleSidebar()" style="display:none">☰</button>
+            <div class="topbar-left">
+                <div>
+                    <div class="topbar-title" id="topbarTitle">AG Mission Control</div>
+                    <div class="topbar-subtitle" id="topbarSubtitle">Select a workspace to begin</div>
+                </div>
+            </div>
+            <div class="status-badge idle" id="statusBadge"><span id="statusText">💤 Idle</span></div>
+            <div class="topbar-actions">
+                <button class="action-btn" id="themeToggle" onclick="AG.toggleTheme()" title="Theme">🌙</button>
+                <button class="action-btn" onclick="AG.takeScreenshot()" title="Screenshot">📸</button>
+                <button class="action-btn" onclick="AG.toggleRightPanel()" title="Settings">⚙️</button>
+                <button class="action-btn danger" onclick="AG.stopAgent()" title="Stop">■</button>
+            </div>
+        </header>
+
+        <!-- Chat -->
+        <div class="chat-area" id="chatArea">
+            <div id="chatContent">
+                <div class="empty-state">
+                    <div class="icon">🚀</div>
+                    <h3>AG Mission Control</h3>
+                    <p>Connect to an Antigravity workspace to start monitoring and controlling your AI agents remotely
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Input -->
+        <div class="input-bar">
+            <textarea id="messageInput" placeholder="Send a message to Antigravity..." rows="1"></textarea>
+            <button class="send-btn" id="sendBtn" title="Send">▶</button>
         </div>
     </main>
 
-    <!-- Screenshot Modal -->
-    <div class="modal-overlay" id="screenshotModal" onclick="closeScreenshot()">
-        <div class="modal-content" onclick="event.stopPropagation()">
-            <img id="screenshotImg" src="" alt="Screenshot">
+    <!-- ═══════════════ RIGHT PANEL ════════════════════ -->
+    <aside class="right-panel" id="rightPanel">
+        <div class="panel-header">
+            <span class="panel-title">Workspace Config</span>
+            <button class="panel-close" onclick="AG.toggleRightPanel()">✕</button>
+        </div>
+        <div class="panel-section">
+            <div class="panel-label">Agent Info</div>
+            <div class="panel-row"><span>Model</span><span class="panel-value">Claude Opus 4.6</span></div>
+            <div class="panel-row"><span>Mode</span><span class="panel-value">Fast</span></div>
+            <div class="panel-row"><span>Context</span><span class="panel-value">150K tokens</span></div>
+        </div>
+        <div class="panel-section">
+            <div class="panel-label">Automation</div>
+            <div class="panel-row"><span>Auto-accept</span>
+                <div class="toggle" onclick="this.classList.toggle('on')"></div>
+            </div>
+            <div class="panel-row"><span>Auto-scroll</span>
+                <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+            </div>
+            <div class="panel-row"><span>Sound alerts</span>
+                <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+            </div>
+        </div>
+        <div class="panel-section">
+            <div class="panel-label">Quick Prompts</div>
+            <button class="add-ws-btn" style="margin-bottom:6px"
+                onclick="document.getElementById('messageInput').value='Fix all lint errors and run tests';AG.toggleRightPanel()">🔧
+                Fix lint + test</button>
+            <button class="add-ws-btn" style="margin-bottom:6px"
+                onclick="document.getElementById('messageInput').value='Commit all changes with a descriptive message';AG.toggleRightPanel()">💾
+                Commit changes</button>
+            <button class="add-ws-btn" style="margin-bottom:6px"
+                onclick="document.getElementById('messageInput').value='Continue with the next task';AG.toggleRightPanel()">▶️
+                Continue</button>
+        </div>
+        <div class="panel-section">
+            <div class="panel-label">Stats</div>
+            <div class="panel-row"><span>Uptime</span><span class="panel-value" id="uptimeValue">–</span></div>
+            <div class="panel-row"><span>Messages sent</span><span class="panel-value">0</span></div>
+            <div class="panel-row"><span>Tasks completed</span><span class="panel-value">0</span></div>
+        </div>
+    </aside>
+
+    <!-- ═══════════════ ADD WORKSPACE MODAL ════════════ -->
+    <div class="modal-overlay" id="addWsModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Add Workspace</h3>
+                <p>Connect to a running Antigravity instance</p>
+            </div>
+            <div class="modal-body">
+                <label>Host</label>
+                <input type="text" id="wsHost" value="localhost" placeholder="localhost or IP address">
+                <label>CDP Port</label>
+                <input type="number" id="wsPort" value="9001" placeholder="9000-9003">
+                <label>Project Name (optional)</label>
+                <input type="text" id="wsName" placeholder="My Project">
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="AG.closeAddWorkspace()">Cancel</button>
+                <button class="btn btn-primary" onclick="AG.addWorkspace()">Connect</button>
+            </div>
         </div>
     </div>
 
-    <!-- Toast -->
-    <div class="toast" id="toast"></div>
+    <!-- ═══════════════ TOAST CONTAINER ════════════════ -->
+    <div class="toast-container" id="toastContainer"></div>
 
-    <script>
-        // ── Theme ─────────────────────────────────────────
-        function initTheme() {
-            const saved = localStorage.getItem('ag-theme');
-            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            const theme = saved || (prefersDark ? 'dark' : 'light');
-            setTheme(theme);
-        }
+    <!-- Cascade styles injected here -->
+    <style id="cascadeStyle"></style>
 
-        function setTheme(theme) {
-            document.documentElement.setAttribute('data-theme', theme);
-            localStorage.setItem('ag-theme', theme);
-            const btn = document.getElementById('themeBtn');
-            if (btn) btn.textContent = theme === 'dark' ? '☀️' : '🌙';
-        }
-
-        function toggleTheme() {
-            const current = document.documentElement.getAttribute('data-theme') || 'dark';
-            setTheme(current === 'dark' ? 'light' : 'dark');
-        }
-
-        // Init theme before DOM renders to avoid flash
-        initTheme();
-
-        // ── State ──────────────────────────────────────────
-        let cascades = [];
-        let currentCascadeId = null;
-        let ws = null;
-        let phaseMap = {};   // cascadeId → phase (multi-project support)
-        let notificationsEnabled = false;
-
-        // Request notification permission
-        function requestNotifications() {
-            if ('Notification' in window && Notification.permission === 'default') {
-                Notification.requestPermission().then(p => {
-                    notificationsEnabled = (p === 'granted');
-                });
-            } else {
-                notificationsEnabled = (Notification.permission === 'granted');
-            }
-        }
-
-        function getPhase(cascadeId) {
-            return phaseMap[cascadeId || currentCascadeId] || 'idle';
-        }
-
-        // Play completion beep
-        function playNotificationSound() {
-            try {
-                const ctx = new AudioContext();
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                osc.frequency.value = 880;
-                osc.type = 'sine';
-                gain.gain.setValueAtTime(0.3, ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-                osc.start();
-                osc.stop(ctx.currentTime + 0.3);
-            } catch { }
-        }
-
-        // ── DOM refs ───────────────────────────────────────
-        const $ = id => document.getElementById(id);
-        const cascadeList = $('cascadeList');
-        const chatContent = $('chatContent');
-        const chatArea = $('chatArea');
-        const messageInput = $('messageInput');
-        const sendBtn = $('sendBtn');
-        const topbarTitle = $('topbarTitle');
-        const statusBadge = $('statusBadge');
-        const statusText = $('statusText');
-        const connectionBadge = $('connectionBadge');
-
-
-        // ── WebSocket ──────────────────────────────────────
-        function connect() {
-            ws = new WebSocket(`ws://${location.host}`);
-
-            ws.onopen = () => {
-                connectionBadge.classList.remove('disconnected');
-                connectionBadge.querySelector('span').textContent = 'Connected';
-            };
-
-            ws.onclose = () => {
-                connectionBadge.classList.add('disconnected');
-                connectionBadge.querySelector('span').textContent = 'Reconnecting...';
-                setTimeout(connect, 2000);
-            };
-
-            ws.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-
-                if (data.type === 'cascade_list') {
-                    cascades = data.cascades;
-                    renderCascadeList();
-                    if (!currentCascadeId && cascades.length > 0) {
-                        selectCascade(cascades[0].id);
-                    }
-                }
-
-                if (data.type === 'snapshot_update') {
-                    if (data.cascadeId === currentCascadeId) {
-                        updateChat(currentCascadeId);
-                    }
-                }
-
-                if (data.type === 'phase_change') {
-                    updatePhase(data.phase, data.cascadeId, data.title);
-                }
-            };
-        }
-
-        // ── Cascade List ───────────────────────────────────
-        function renderCascadeList() {
-            if (cascades.length === 0) {
-                cascadeList.innerHTML = `
-                    <div style="padding: 20px; text-align: center;">
-                        <div style="font-size: 24px; margin-bottom: 8px; opacity: 0.4;">🔍</div>
-                        <div style="font-size: 12px; color: var(--text-muted);">No Antigravity instances found</div>
-                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Launch with --remote-debugging-port=9000</div>
-                    </div>
-                `;
-                return;
-            }
-
-            cascadeList.innerHTML = cascades.map(c => {
-                const isActive = c.id === currentCascadeId;
-                const cPhase = getPhase(c.id);
-                const shortTitle = extractProjectName(c.title);
-                const phaseLabel = { idle: '', streaming: '⚡', complete: '✅' };
-                return `
-                    <div class="cascade-item ${isActive ? 'active' : ''}" onclick="selectCascade('${c.id}')">
-                        <div class="cascade-dot ${cPhase}"></div>
-                        <div class="cascade-info">
-                            <div class="cascade-name">${shortTitle} ${phaseLabel[cPhase] || ''}</div>
-                            <div class="cascade-meta">${c.window || ''}</div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function extractProjectName(title) {
-            if (!title) return 'Untitled';
-            // "Antigravity-Shit-Chat - Antigravity - file.js" → "Antigravity-Shit-Chat"
-            const parts = title.split(' - ');
-            return parts[0] || title;
-        }
-
-        // ── Cascade Selection ──────────────────────────────
-        function selectCascade(id) {
-            currentCascadeId = id;
-            renderCascadeList();
-            loadCascade(id);
-            closeSidebar();
-        }
-
-        async function loadCascade(id) {
-            const cascade = cascades.find(c => c.id === id);
-            topbarTitle.textContent = cascade ? extractProjectName(cascade.title) : 'AG Mission Control';
-
-            try {
-                const styleRes = await fetch(`/styles/${id}`);
-                if (styleRes.ok) {
-                    const styleData = await styleRes.json();
-                    $('cascade-style-container').textContent = styleData.css;
-                }
-                await updateChat(id);
-            } catch (e) {
-                console.error(e);
-            }
-        }
-
-        async function updateChat(id) {
-            try {
-                const res = await fetch(`/snapshot/${id}`);
-                if (!res.ok) throw new Error('Failed');
-                const data = await res.json();
-
-                const isAtBottom = chatArea.scrollHeight - chatArea.scrollTop - chatArea.clientHeight < 80;
-
-                chatContent.innerHTML = `<div class="chat-mirror">${data.html}</div>`;
-
-                if (isAtBottom) {
-                    requestAnimationFrame(() => chatArea.scrollTop = chatArea.scrollHeight);
-                }
-            } catch (e) { }
-        }
-
-        // ── Phase / Status ─────────────────────────────────
-        function updatePhase(phase, cascadeId, title) {
-            // Store per-cascade phase
-            if (cascadeId) phaseMap[cascadeId] = phase;
-
-            // Update topbar only for selected cascade
-            if (!cascadeId || cascadeId === currentCascadeId) {
-                statusBadge.className = `status-badge ${phase}`;
-                const labels = {
-                    idle: '💤 Idle',
-                    streaming: '⚡ Streaming',
-                    complete: '✅ Complete'
-                };
-                statusText.textContent = labels[phase] || phase;
-            }
-
-            renderCascadeList();
-
-            // Browser notification on task complete
-            if (phase === 'complete') {
-                const projectName = title || extractProjectName(
-                    (cascades.find(c => c.id === cascadeId) || {}).title
-                ) || 'Antigravity';
-
-                // Always show toast
-                showToast(`✅ ${projectName} — Task complete`);
-
-                // Play sound
-                playNotificationSound();
-
-                // System notification (works even when tab is background)
-                if (notificationsEnabled && document.hidden) {
-                    new Notification('AG Mission Control', {
-                        body: `✅ ${projectName} — Task complete`,
-                        icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🚀</text></svg>',
-                        tag: 'ag-complete-' + cascadeId
-                    });
-                }
-            }
-
-            if (phase === 'streaming' && cascadeId === currentCascadeId) {
-                showToast(`⚡ Agent started working...`);
-            }
-
-            // Adjust refresh rate based on selected cascade phase
-            if (typeof startAutoRefresh === 'function') startAutoRefresh();
-        }
-
-        // Poll handled by auto-refresh and WebSocket events
-
-        // ── Send Message ───────────────────────────────────
-        async function sendMessage() {
-            const text = messageInput.value.trim();
-            if (!text || !currentCascadeId) return;
-
-            messageInput.value = '';
-            messageInput.style.height = 'auto';
-            sendBtn.disabled = true;
-            showToast('📤 Sending...');
-            requestNotifications(); // Request on first send action
-
-            try {
-                const res = await fetch(`/send/${currentCascadeId}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: text })
-                });
-
-                if (res.ok) {
-                    showToast('✅ Message sent');
-                    updatePhase('streaming', currentCascadeId);
-                    setTimeout(() => updateChat(currentCascadeId), 500);
-                } else {
-                    const err = await res.json();
-                    showToast(`❌ Failed: ${err.reason || 'Unknown error'}`);
-                    messageInput.value = text;
-                }
-            } catch (e) {
-                showToast(`❌ Error: ${e.message}`);
-                messageInput.value = text;
-            }
-        }
-
-        // ── Actions ────────────────────────────────────────
-        async function takeScreenshot() {
-            if (!currentCascadeId) return;
-            showToast('📸 Capturing...');
-
-            try {
-                const res = await fetch(`/screenshot/${currentCascadeId}`);
-                if (res.ok) {
-                    const blob = await res.blob();
-                    const url = URL.createObjectURL(blob);
-                    $('screenshotImg').src = url;
-                    $('screenshotModal').classList.add('show');
-                    showToast('📸 Screenshot captured');
-                } else {
-                    showToast('❌ Screenshot failed');
-                }
-            } catch (e) {
-                showToast('❌ ' + e.message);
-            }
-        }
-
-        function closeScreenshot() {
-            $('screenshotModal').classList.remove('show');
-        }
-
-        async function stopAgent() {
-            if (!currentCascadeId) return;
-            try {
-                const res = await fetch(`/stop/${currentCascadeId}`, { method: 'POST' });
-                if (res.ok) showToast('🛑 Stop signal sent');
-                else showToast('❌ Stop failed');
-            } catch (e) {
-                showToast('❌ ' + e.message);
-            }
-        }
-
-        // ── UI Helpers ─────────────────────────────────────
-        function showToast(message) {
-            const toast = $('toast');
-            toast.textContent = message;
-            toast.classList.add('show');
-            clearTimeout(toast._timeout);
-            toast._timeout = setTimeout(() => toast.classList.remove('show'), 3000);
-        }
-
-        function toggleSidebar() {
-            $('sidebar').classList.toggle('open');
-            $('sidebarOverlay').classList.toggle('show');
-        }
-
-        function closeSidebar() {
-            $('sidebar').classList.remove('open');
-            $('sidebarOverlay').classList.remove('show');
-        }
-
-        // ── Input Handling ─────────────────────────────────
-        messageInput.addEventListener('input', () => {
-            sendBtn.disabled = !messageInput.value.trim();
-            // Auto-resize
-            messageInput.style.height = 'auto';
-            messageInput.style.height = Math.min(messageInput.scrollHeight, 120) + 'px';
-        });
-
-        messageInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-            }
-        });
-
-        // Keyboard shortcut: Escape to close modals
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                closeScreenshot();
-                closeSidebar();
-            }
-        });
-
-        // ── Auto-refresh when streaming ───────────────────
-        let refreshTimer = null;
-
-        function startAutoRefresh() {
-            stopAutoRefresh();
-            const selectedPhase = getPhase(currentCascadeId);
-            refreshTimer = setInterval(() => {
-                if (currentCascadeId) updateChat(currentCascadeId);
-            }, selectedPhase === 'streaming' ? 2000 : 5000);
-        }
-
-        function stopAutoRefresh() {
-            if (refreshTimer) clearInterval(refreshTimer);
-        }
-
-        // ── Init ───────────────────────────────────────────
-        connect();
-        startAutoRefresh();
-
-        // Focus input on load
-        messageInput.focus();
-    </script>
+    <script src="/js/app.js"></script>
 </body>
 
 </html>
