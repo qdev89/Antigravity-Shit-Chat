@@ -172,57 +172,64 @@ export class TelegramBot {
 
         // /project, /cascades — Remoat-style project selector
         const projectCmd = async (ctx, page = 0) => {
-            const list = this.cdp.getCascadeList();
-            if (list.length === 0) {
-                await ctx.reply('<b>📁 Projects</b>\n\nNo Antigravity instances found.\n\nLaunch with <code>--remote-debugging-port=9000</code>', { parse_mode: 'HTML' });
-                return;
+            try {
+                const list = this.cdp.getCascadeList();
+                if (list.length === 0) {
+                    await ctx.reply('📁 Projects\n\nNo Antigravity instances found.\n\nLaunch with --remote-debugging-port=9000');
+                    return;
+                }
+
+                const ITEMS_PER_PAGE = 10;
+                const totalPages = Math.max(1, Math.ceil(list.length / ITEMS_PER_PAGE));
+                const safePage = Math.max(0, Math.min(page, totalPages - 1));
+                const start = safePage * ITEMS_PER_PAGE;
+                const pageItems = list.slice(start, start + ITEMS_PER_PAGE);
+
+                // Phase indicators
+                const phaseIcon = (id) => {
+                    try {
+                        const state = this.monitor?._getState(id);
+                        const p = state?.phase || 'idle';
+                        return { idle: '💤', streaming: '⚡', complete: '✅', error: '❌' }[p] || '❓';
+                    } catch { return '❓'; }
+                };
+
+                // Build text (plain, no HTML to avoid parse errors)
+                let text = '📁 Projects\n\nSelect a project to work with:\n\n';
+                text += pageItems.map((c, i) => {
+                    const num = start + i + 1;
+                    const selected = c.id === this._activeCascadeId ? ' ← current' : '';
+                    const name = this._shortTitle(c.title);
+                    const icon = phaseIcon(c.id);
+                    return `${num}. ${icon} ${name}${selected}`;
+                }).join('\n');
+
+                if (totalPages > 1) {
+                    text += `\n\nPage ${safePage + 1} / ${totalPages} (${list.length} projects)`;
+                }
+
+                // Build keyboard — one button per project
+                const keyboard = new InlineKeyboard();
+                for (const c of pageItems) {
+                    const label = this._shortTitle(c.title);
+                    const current = c.id === this._activeCascadeId ? ' ✓' : '';
+                    const icon = phaseIcon(c.id);
+                    const shortLabel = label.length > 30 ? label.substring(0, 27) + '...' : label;
+                    keyboard.text(`${icon} ${shortLabel}${current}`, `select:${c.id}`).row();
+                }
+
+                // Pagination buttons
+                if (totalPages > 1) {
+                    if (safePage > 0) keyboard.text('◀ Prev', `project_page:${safePage - 1}`);
+                    if (safePage < totalPages - 1) keyboard.text('Next ▶', `project_page:${safePage + 1}`);
+                    keyboard.row();
+                }
+
+                await ctx.reply(text, { reply_markup: keyboard });
+            } catch (err) {
+                console.error('❌ /project error:', err);
+                await ctx.reply('❌ Failed to list projects: ' + (err.message || 'unknown error'));
             }
-
-            const ITEMS_PER_PAGE = 10;
-            const totalPages = Math.max(1, Math.ceil(list.length / ITEMS_PER_PAGE));
-            const safePage = Math.max(0, Math.min(page, totalPages - 1));
-            const start = safePage * ITEMS_PER_PAGE;
-            const pageItems = list.slice(start, start + ITEMS_PER_PAGE);
-
-            // Phase indicators
-            const phaseIcon = (id) => {
-                const state = this.monitor?._getState(id);
-                const p = state?.phase || 'idle';
-                return { idle: '💤', streaming: '⚡', complete: '✅', error: '❌' }[p] || '❓';
-            };
-
-            // Build rich text
-            let text = '<b>📁 Projects</b>\n\nSelect a project to work with:\n\n';
-            text += pageItems.map((c, i) => {
-                const num = start + i + 1;
-                const selected = c.id === this._activeCascadeId ? ' ← current' : '';
-                const name = this._shortTitle(c.title);
-                const icon = phaseIcon(c.id);
-                return `${num}. ${icon} <b>${name}</b>${selected}`;
-            }).join('\n');
-
-            if (totalPages > 1) {
-                text += `\n\n<i>Page ${safePage + 1} / ${totalPages} (${list.length} projects)</i>`;
-            }
-
-            // Build keyboard — one button per project
-            const keyboard = new InlineKeyboard();
-            for (const c of pageItems) {
-                const label = this._shortTitle(c.title);
-                const current = c.id === this._activeCascadeId ? ' ✓' : '';
-                const icon = phaseIcon(c.id);
-                const shortLabel = label.length > 30 ? label.substring(0, 27) + '...' : label;
-                keyboard.text(`${icon} ${shortLabel}${current}`, `select:${c.id}`).row();
-            }
-
-            // Pagination buttons
-            if (totalPages > 1) {
-                if (safePage > 0) keyboard.text('◀ Prev', `project_page:${safePage - 1}`);
-                if (safePage < totalPages - 1) keyboard.text('Next ▶', `project_page:${safePage + 1}`);
-                keyboard.row();
-            }
-
-            await ctx.reply(text, { parse_mode: 'HTML', reply_markup: keyboard });
         };
 
         this.bot.command('project', projectCmd);
@@ -238,8 +245,7 @@ export class TelegramBot {
                 const name = this._shortTitle(cascade.metadata.chatTitle);
                 await ctx.answerCallbackQuery({ text: `Switched to: ${name}` });
                 await ctx.editMessageText(
-                    `✅ <b>Active project: ${name}</b>\n\nAll messages will now go to this workspace.\n\n💡 Just type your prompt to send it.`,
-                    { parse_mode: 'HTML' }
+                    `✅ Active project: ${name}\n\nAll messages will now go to this workspace.\n\n💡 Just type your prompt to send it.`
                 );
             } else {
                 await ctx.answerCallbackQuery({ text: 'Project disconnected' });
