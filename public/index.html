@@ -7,11 +7,16 @@
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>AG Mission Control</title>
     <meta name="description" content="Premium remote dashboard for managing Antigravity IDE instances">
+    <meta name="theme-color" content="#0a0a0f">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/icons/icon-192.svg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="/css/styles.css?v=3">
+    <link rel="stylesheet" href="/css/styles.css?v=6">
 </head>
 
 <body>
@@ -93,13 +98,13 @@
             style="display:none;flex:1;display:flex;flex-direction:column">
             <div class="sidebar-header">
                 <div class="sidebar-title">Task History</div>
+                <button class="add-ws-btn" style="font-size:11px;padding:4px 8px" onclick="AG.clearHistory()">🗑️
+                    Clear</button>
             </div>
-            <div class="sidebar-content" style="padding:16px">
-                <div id="historyList">
-                    <p style="font-size:12px;color:var(--text-muted);text-align:center;padding:20px">
-                        📋 Task history will appear here as you send prompts
-                    </p>
-                </div>
+            <div class="sidebar-content" style="padding:16px" id="historyList">
+                <p style="font-size:12px;color:var(--text-muted);text-align:center;padding:20px">
+                    📋 Task history will appear here as you send prompts
+                </p>
             </div>
         </div>
 
@@ -177,8 +182,14 @@
                             Connected</span></div>
                 </div>
                 <div class="panel-section">
+                    <div class="panel-label">Automation</div>
+                    <div class="panel-row"><span>Auto-Accept</span>
+                        <div class="toggle" onclick="AG.toggleAutoAccept();this.classList.toggle('on')"></div>
+                    </div>
+                </div>
+                <div class="panel-section">
                     <div class="panel-label">About</div>
-                    <div class="panel-row"><span>Version</span><span class="panel-value">v2.1.0</span></div>
+                    <div class="panel-row"><span>Version</span><span class="panel-value">v3.0.0</span></div>
                     <div class="panel-row"><span>License</span><span class="panel-value">MIT</span></div>
                 </div>
             </div>
@@ -204,6 +215,9 @@
             </div>
             <div class="status-badge idle" id="statusBadge"><span id="statusText">💤 Idle</span></div>
             <div class="topbar-actions">
+                <button class="action-btn" onclick="AG.toggleAutoAccept()" title="Auto-Accept (Turbo Mode)">
+                    🤖 <span id="autoAcceptBadge" style="font-size:10px">🔴 OFF</span>
+                </button>
                 <button class="action-btn" id="themeToggle" onclick="AG.toggleTheme()" title="Theme">🌙</button>
                 <button class="action-btn" onclick="AG.takeScreenshot()" title="Screenshot">📸</button>
                 <button class="action-btn" onclick="AG.toggleRightPanel()" title="Settings">⚙️</button>
@@ -303,7 +317,7 @@
     <!-- Cascade styles injected here -->
     <style id="cascadeStyle"></style>
 
-    <script src="/js/app.js?v=5"></script>
+    <script src="/js/app.js?v=6"></script>
 </body>
 
 </html>

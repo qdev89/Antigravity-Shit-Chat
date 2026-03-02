@@ -104,6 +104,43 @@ export function createWebServer(cdpManager, responseMonitor, opts = {}) {
         }
     });
 
+    // ── API: Auto-accept confirmations ─────────────────
+    app.post('/autoaccept/:id', async (req, res) => {
+        const cascade = cdpManager.cascades.get(req.params.id);
+        if (!cascade) return res.status(404).json({ ok: false });
+        try {
+            const result = await cascade.cdp.call('Runtime.evaluate', {
+                expression: `(() => {
+                    // Look for accept/confirm/approve buttons
+                    const selectors = [
+                        'button[aria-label*="Accept"]', 'button[aria-label*="Confirm"]',
+                        'button[aria-label*="Allow"]', 'button[aria-label*="Approve"]',
+                        'button[aria-label*="Yes"]', 'button[aria-label*="Continue"]',
+                        'button[aria-label*="Run"]',
+                        '.confirm-button', '.accept-button',
+                        'button.primary:not([disabled])'
+                    ];
+                    for (const sel of selectors) {
+                        const btns = document.querySelectorAll(sel);
+                        for (const btn of btns) {
+                            if (btn.offsetParent && !btn.disabled) {
+                                btn.click();
+                                return 'clicked: ' + (btn.textContent || btn.ariaLabel || sel).substring(0, 50);
+                            }
+                        }
+                    }
+                    return 'none';
+                })()`,
+                returnByValue: true,
+                contextId: cascade.cdp.rootContextId
+            });
+            const action = result?.result?.value || 'none';
+            res.json({ ok: true, action });
+        } catch (e) {
+            res.json({ ok: false, reason: e.message });
+        }
+    });
+
     // ── API: Stop agent ───────────────────────────────
     app.post('/stop/:id', async (req, res) => {
         const cascade = cdpManager.cascades.get(req.params.id);

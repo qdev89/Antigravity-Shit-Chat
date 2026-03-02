@@ -329,12 +329,10 @@ export class TelegramBot {
 
     _bindMonitorEvents() {
         if (!this.bot) return;
+        this._streamStartTimes = {}; // track when streaming started per cascade
 
         this.monitor.on('phase', async (event) => {
-            // Only notify for the active cascade (or all if none selected)
-            if (this._activeCascadeId && event.cascadeId !== this._activeCascadeId) return;
-
-            const chatId = this.allowedUsers[0]; // send to first allowed user
+            const chatId = this.allowedUsers[0];
             if (!chatId) return;
 
             try {
@@ -343,6 +341,7 @@ export class TelegramBot {
                 switch (event.phase) {
                     case PHASE.STREAMING:
                         if (event.prevPhase === PHASE.IDLE) {
+                            this._streamStartTimes[event.cascadeId] = Date.now();
                             await this.bot.api.sendMessage(chatId,
                                 `⚡ Agent started working\n📁 ${projectName}`
                             );
@@ -350,10 +349,15 @@ export class TelegramBot {
                         break;
 
                     case PHASE.COMPLETE: {
-                        // Send completion with preview + quick action keyboard
+                        // Calculate duration
+                        const startTime = this._streamStartTimes[event.cascadeId];
+                        const duration = startTime ? this._formatDuration(Date.now() - startTime) : '';
+                        delete this._streamStartTimes[event.cascadeId];
+
                         let msg = `✅ Task complete\n📁 ${projectName}`;
+                        if (duration) msg += `\n⏱ ${duration}`;
                         if (event.message) {
-                            const preview = event.message.substring(0, 600);
+                            const preview = event.message.substring(0, 500);
                             msg += `\n\n${preview}`;
                         }
 
@@ -371,6 +375,7 @@ export class TelegramBot {
                 console.error('Telegram notification error:', e.message);
             }
         });
+
 
         // Handle quick action buttons
         this.bot.callbackQuery(/^action:(\w+):(.+)$/, async (ctx) => {
@@ -415,6 +420,15 @@ export class TelegramBot {
         if (!title) return 'Untitled';
         const parts = title.split(' - ');
         return parts[0] || title;
+    }
+
+    _formatDuration(ms) {
+        const s = Math.floor(ms / 1000);
+        if (s < 60) return `${s}s`;
+        const m = Math.floor(s / 60);
+        if (m < 60) return `${m}m ${s % 60}s`;
+        const h = Math.floor(m / 60);
+        return `${h}h ${m % 60}m`;
     }
 
     _escMd(text) {
