@@ -178,8 +178,11 @@
         isSending = true;
         if (btn) btn.disabled = true;
         showToast('📤 Sending...');
-        requestNotifications();
         try {
+            // Request notification permission (non-blocking)
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission().catch(() => { });
+            }
             const controller = new AbortController();
             const timeout = setTimeout(() => controller.abort(), 15000);
             const url = `/send/${currentCascadeId}`;
