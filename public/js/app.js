@@ -254,14 +254,45 @@
         const modal = $('addWsModal');
         if (modal) modal.classList.remove('open');
     }
-    function addWorkspace() {
-        const host = $('wsHost')?.value || 'localhost';
-        const port = $('wsPort')?.value || '9000';
-        showToast(`🔍 Scanning ${host}:${port}...`);
+    async function addWorkspace() {
+        const host = $('wsHost')?.value?.trim() || 'localhost';
+        const port = parseInt($('wsPort')?.value) || 9001;
+        const name = $('wsName')?.value?.trim() || '';
         closeAddWorkspace();
-        // Server-side: would trigger a CDP scan on the specified port
-        // For MVP: just show feedback
-        setTimeout(() => showToast(`⚡ Connect to AG at ${host}:${port} manually`), 1000);
+        showToast(`🔍 Scanning ${host}:${port}...`);
+        try {
+            const res = await fetch('/workspace/add', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ host, port, name })
+            });
+            const data = await res.json();
+            if (data.ok) {
+                showToast(data.isNew ? `✅ Added ${host}:${port} — scanning for AG instances` : `ℹ️ Already scanning ${host}:${port}`);
+                // Save to localStorage for persistence
+                const saved = JSON.parse(localStorage.getItem('ag-extra-ports') || '[]');
+                if (!saved.find(s => s.host === host && s.port === port)) {
+                    saved.push({ host, port, name });
+                    localStorage.setItem('ag-extra-ports', JSON.stringify(saved));
+                }
+            } else {
+                showToast(`❌ ${data.reason || 'Failed to add'}`);
+            }
+        } catch (err) {
+            showToast('❌ ' + (err.message || 'Connection error'));
+        }
+    }
+
+    // Restore saved extra ports on load
+    function restoreSavedPorts() {
+        const saved = JSON.parse(localStorage.getItem('ag-extra-ports') || '[]');
+        for (const s of saved) {
+            fetch('/workspace/add', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ host: s.host, port: s.port })
+            }).catch(() => { });
+        }
     }
 
     // ── Nav ────────────────────────────────────────
@@ -303,6 +334,8 @@
     // ── Init ───────────────────────────────────────
     function init() {
         initTheme();
+        requestNotifications();
+        restoreSavedPorts();
         connect();
         startAutoRefresh();
 

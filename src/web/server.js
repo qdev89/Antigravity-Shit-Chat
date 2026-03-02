@@ -25,6 +25,19 @@ export function createWebServer(cdpManager, responseMonitor, opts = {}) {
         res.json({ cascades: cdpManager.getCascadeList() });
     });
 
+    // ── API: Add workspace (new CDP target) ───────────
+    app.post('/workspace/add', (req, res) => {
+        const { host, port } = req.body;
+        if (!port) return res.status(400).json({ ok: false, reason: 'Port required' });
+        const isNew = cdpManager.addPort(port, host || '127.0.0.1');
+        res.json({ ok: true, isNew, message: isNew ? `Scanning ${host || '127.0.0.1'}:${port}...` : 'Already scanning this target' });
+    });
+
+    // ── API: List scan targets ────────────────────────
+    app.get('/workspace/ports', (req, res) => {
+        res.json({ ports: cdpManager.ports });
+    });
+
     // ── API: Get cascade snapshot ─────────────────────
     app.get('/snapshot/:id', (req, res) => {
         const cascade = cdpManager.cascades.get(req.params.id);

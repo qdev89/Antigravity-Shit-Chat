@@ -334,12 +334,14 @@ export class CDPManager extends EventEmitter {
 
     async discover() {
         const allTargets = [];
-        await Promise.all(this.ports.map(async (port) => {
-            const list = await this.getJson(`http://127.0.0.1:${port}/json/list`);
+        await Promise.all(this.ports.map(async (portEntry) => {
+            const host = typeof portEntry === 'object' ? portEntry.host : '127.0.0.1';
+            const port = typeof portEntry === 'object' ? portEntry.port : portEntry;
+            const list = await this.getJson(`http://${host}:${port}/json/list`);
             const workbenches = list.filter(t =>
                 t.url?.includes('workbench.html') || t.title?.includes('workbench')
             );
-            workbenches.forEach(t => allTargets.push({ ...t, port }));
+            workbenches.forEach(t => allTargets.push({ ...t, port, host }));
         }));
 
         const newCascades = new Map();
@@ -368,6 +370,8 @@ export class CDPManager extends EventEmitter {
                     const cascade = {
                         id,
                         cdp,
+                        port: target.port,
+                        host: target.host || '127.0.0.1',
                         metadata: {
                             windowTitle: target.title,
                             chatTitle: meta.chatTitle,
@@ -422,13 +426,31 @@ export class CDPManager extends EventEmitter {
             id: c.id,
             title: c.metadata.chatTitle,
             window: c.metadata.windowTitle,
-            active: c.metadata.isActive
+            active: c.metadata.isActive,
+            port: c.port,
+            host: c.host
         }));
     }
 
     getActiveCascade() {
         return Array.from(this.cascades.values()).find(c => c.metadata.isActive)
             || this.cascades.values().next().value || null;
+    }
+
+    // Add a new port/host dynamically
+    addPort(port, host = '127.0.0.1') {
+        const entry = { port: parseInt(port), host };
+        // Check if already exists
+        const exists = this.ports.some(p =>
+            (typeof p === 'object' ? p.port === entry.port && p.host === entry.host : p === entry.port && host === '127.0.0.1')
+        );
+        if (!exists) {
+            this.ports.push(entry);
+            console.log(`➕ Added CDP target ${host}:${port}`);
+        }
+        // Trigger immediate discovery
+        this.discover();
+        return !exists;
     }
 
     start() {
