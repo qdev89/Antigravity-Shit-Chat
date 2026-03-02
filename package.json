@@ -1,17 +1,33 @@
 {
-    "name": "ag-mobile-monitor",
-    "version": "1.0.0",
+    "name": "ag-shit-chat",
+    "version": "2.0.0",
     "type": "module",
-    "description": "Mobile web interface for monitoring Antigravity chat via visual snapshots",
+    "description": "Dual-channel remote control for Antigravity IDE — Web viewer + Telegram bot",
+    "main": "server.js",
+    "bin": {
+        "ag-shit-chat": "server.js"
+    },
     "scripts": {
         "start": "node server.js",
-        "dev": "node server.js"
+        "dev": "node --watch server.js"
     },
+    "keywords": [
+        "antigravity",
+        "telegram-bot",
+        "cdp",
+        "chrome-devtools-protocol",
+        "ai-coding",
+        "remote-control",
+        "developer-tools",
+        "grammy"
+    ],
     "dependencies": {
-        "ws": "^8.18.0",
-        "express": "^4.18.2"
+        "dotenv": "^17.0.0",
+        "express": "^4.18.2",
+        "grammy": "^1.40.1",
+        "ws": "^8.18.0"
     },
     "engines": {
-        "node": ">=16.0.0"
+        "node": ">=18.0.0"
     }
 }

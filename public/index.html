@@ -5,8 +5,36 @@
     <meta charset="UTF-8">
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Antigravity Shit-Chat</title>
+    <title>AG Mission Control</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
     <style>
+        :root {
+            --bg-primary: #08080c;
+            --bg-secondary: #0e0e14;
+            --bg-tertiary: #14141c;
+            --bg-card: #161620;
+            --bg-hover: #1c1c28;
+            --bg-active: #222230;
+            --border: #1e1e2a;
+            --border-hover: #2a2a3a;
+            --text-primary: #e8e8f0;
+            --text-secondary: #8888a0;
+            --text-muted: #555568;
+            --accent: #7c5cfc;
+            --accent-hover: #9070ff;
+            --accent-glow: rgba(124, 92, 252, 0.15);
+            --success: #34d399;
+            --warning: #fbbf24;
+            --danger: #f87171;
+            --streaming: #60a5fa;
+            --sidebar-width: 280px;
+            --topbar-height: 56px;
+            --input-height: 72px;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -14,155 +42,703 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #1a1a1a !important;
-            color: #fff !important;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
             height: 100vh;
-            /* Fallback */
             height: 100dvh;
-            /* Dynamic constraint */
+            overflow: hidden;
+            display: flex;
+        }
+
+        /* ── Sidebar ─────────────────────────────────── */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
             display: flex;
             flex-direction: column;
-            overflow: hidden;
-            margin: 0 !important;
-        }
-
-        /* Cascade Selector / Header */
-        .headers-container {
-            background: #2a2a2a !important;
-            border-bottom: 1px solid #3a3a3a !important;
-            position: relative;
+            flex-shrink: 0;
+            transition: transform 0.3s ease;
             z-index: 100;
-            display: flex;
-            overflow-x: auto;
-            white-space: nowrap;
-            -webkit-overflow-scrolling: touch;
         }
 
-        .cascade-tab {
-            padding: 12px 16px;
-            cursor: pointer;
-            border-right: 1px solid #3a3a3a;
-            opacity: 0.6;
-            transition: all 0.2s;
-            font-size: 14px;
+        .sidebar-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 12px;
         }
 
-        .cascade-tab.active {
-            opacity: 1;
-            background: #333;
-            border-bottom: 2px solid #3b82f6;
+        .sidebar-logo {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, var(--accent), #a855f7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: 700;
         }
 
-        .cascade-tab .status {
+        .sidebar-title {
+            font-size: 15px;
+            font-weight: 600;
+            letter-spacing: -0.3px;
+        }
+
+        .sidebar-subtitle {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        .sidebar-section-label {
+            padding: 20px 20px 8px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .cascade-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 4px 8px;
+        }
+
+        .cascade-item {
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.15s ease;
+            margin-bottom: 2px;
+        }
+
+        .cascade-item:hover {
+            background: var(--bg-hover);
+        }
+
+        .cascade-item.active {
+            background: var(--bg-active);
+        }
+
+        .cascade-dot {
             width: 8px;
             height: 8px;
             border-radius: 50%;
-            background: #666;
+            flex-shrink: 0;
+            transition: all 0.3s ease;
         }
 
-        .cascade-tab.active-window .status {
-            background: #4ade80;
+        .cascade-dot.idle {
+            background: var(--text-muted);
         }
 
-        /* Green if optimized/active window */
+        .cascade-dot.streaming {
+            background: var(--streaming);
+            box-shadow: 0 0 8px var(--streaming);
+            animation: pulse 1.5s ease-in-out infinite;
+        }
 
-        .chat-container {
+        .cascade-dot.complete {
+            background: var(--success);
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .cascade-info {
             flex: 1;
-            overflow-y: auto;
-            position: relative;
+            min-width: 0;
         }
 
-        .chat-content {
-            padding: 16px;
-            min-height: 100%;
+        .cascade-name {
+            font-size: 13px;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
-        .input-section {
-            background: #2a2a2a !important;
-            padding: 12px;
-            /* Account for mobile safe areas */
-            padding-bottom: calc(12px + env(safe-area-inset-bottom));
-            border-top: 1px solid #3a3a3a !important;
-            position: relative;
-            z-index: 1000;
-            /* Increased z-index */
+        .cascade-meta {
+            font-size: 11px;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .sidebar-footer {
+            padding: 12px 16px;
+            border-top: 1px solid var(--border);
             display: flex;
+            align-items: center;
             gap: 8px;
         }
 
-        textarea {
+        .connection-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: var(--text-muted);
+            padding: 4px 10px;
+            border-radius: 12px;
+            background: var(--bg-tertiary);
+        }
+
+        .connection-badge .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--success);
+        }
+
+        .connection-badge.disconnected .dot {
+            background: var(--danger);
+        }
+
+        /* ── Main Area ───────────────────────────────── */
+        .main {
             flex: 1;
-            background: #1a1a1a;
-            border: 1px solid #3a3a3a;
-            color: white;
-            padding: 8px;
-            border-radius: 6px;
-            resize: none;
-            height: 40px;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
         }
 
-        button {
+        .topbar {
+            height: var(--topbar-height);
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
             padding: 0 20px;
-            background: #3b82f6;
-            border: none;
-            color: white;
-            border-radius: 6px;
-            font-weight: 600;
+            gap: 12px;
+            flex-shrink: 0;
         }
 
-        .loading {
+        .menu-btn {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 20px;
+            cursor: pointer;
+            padding: 4px;
+        }
+
+        .topbar-title {
+            font-size: 14px;
+            font-weight: 600;
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-badge.idle {
+            color: var(--text-muted);
+        }
+
+        .status-badge.streaming {
+            color: var(--streaming);
+            border-color: rgba(96, 165, 250, 0.3);
+            background: rgba(96, 165, 250, 0.08);
+        }
+
+        .status-badge.complete {
+            color: var(--success);
+            border-color: rgba(52, 211, 153, 0.3);
+            background: rgba(52, 211, 153, 0.08);
+        }
+
+        .topbar-actions {
+            display: flex;
+            gap: 4px;
+        }
+
+        .action-btn {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.15s ease;
+            font-family: inherit;
+        }
+
+        .action-btn:hover {
+            color: var(--text-primary);
+            background: var(--bg-hover);
+            border-color: var(--border-hover);
+        }
+
+        .action-btn.danger:hover {
+            color: var(--danger);
+            border-color: rgba(248, 113, 113, 0.3);
+            background: rgba(248, 113, 113, 0.08);
+        }
+
+        /* ── Chat Area ───────────────────────────────── */
+        .chat-area {
+            flex: 1;
+            overflow-y: auto;
+            position: relative;
+            scroll-behavior: smooth;
+        }
+
+        .chat-content {
+            padding: 24px;
+            min-height: 100%;
+        }
+
+        .chat-mirror {
+            font-size: 14px;
+            line-height: 1.7;
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-muted);
+            gap: 16px;
+            padding: 40px;
             text-align: center;
-            color: #666;
-            margin-top: 50px;
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            opacity: 0.4;
+        }
+
+        .empty-state-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-desc {
+            font-size: 13px;
+            line-height: 1.6;
+            max-width: 400px;
+        }
+
+        /* ── Input Bar ───────────────────────────────── */
+        .input-bar {
+            padding: 12px 20px;
+            padding-bottom: calc(12px + env(safe-area-inset-bottom));
+            border-top: 1px solid var(--border);
+            background: var(--bg-secondary);
+            flex-shrink: 0;
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 8px;
+            align-items: flex-end;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 4px 4px 4px 16px;
+            transition: border-color 0.2s ease;
+        }
+
+        .input-wrapper:focus-within {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .input-wrapper textarea {
+            flex: 1;
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 14px;
+            resize: none;
+            outline: none;
+            padding: 8px 0;
+            min-height: 20px;
+            max-height: 120px;
+            line-height: 1.5;
+        }
+
+        .input-wrapper textarea::placeholder {
+            color: var(--text-muted);
+        }
+
+        .send-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            border: none;
+            background: var(--accent);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+            flex-shrink: 0;
+        }
+
+        .send-btn:hover {
+            background: var(--accent-hover);
+            transform: scale(1.05);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .send-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* ── Cascade CSS Overrides ────────────────────── */
+        #cascade-style-container .chat-mirror {
+            background: transparent !important;
+        }
+
+        .chat-mirror pre,
+        .chat-mirror code {
+            background: var(--bg-tertiary) !important;
+            border: 1px solid var(--border) !important;
+            border-radius: 8px !important;
+            font-family: 'JetBrains Mono', monospace !important;
+            font-size: 13px !important;
+        }
+
+        .chat-mirror pre {
+            padding: 16px !important;
+            margin: 12px 0 !important;
+            overflow-x: auto !important;
+        }
+
+        .chat-mirror code {
+            padding: 2px 6px !important;
+            border-radius: 4px !important;
+        }
+
+        .chat-mirror pre code {
+            border: none !important;
+            padding: 0 !important;
+        }
+
+        /* Override Antigravity's prose styles for readability */
+        .chat-mirror,
+        .chat-mirror * {
+            color: var(--text-primary) !important;
+        }
+
+        .chat-mirror a {
+            color: var(--accent) !important;
+        }
+
+        .chat-mirror strong {
+            color: #fff !important;
+        }
+
+        .chat-mirror h1,
+        .chat-mirror h2,
+        .chat-mirror h3 {
+            color: #fff !important;
+            margin-top: 20px !important;
+            margin-bottom: 8px !important;
+        }
+
+        /* ── Notification Toast ───────────────────────── */
+        .toast {
+            position: fixed;
+            bottom: 100px;
+            right: 24px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px 16px;
+            font-size: 13px;
+            color: var(--text-primary);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            transform: translateY(20px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 1000;
+            max-width: 320px;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        /* ── Screenshot Modal ─────────────────────────── */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 4px;
+            max-width: 90vw;
+            max-height: 90vh;
+        }
+
+        .modal-content img {
+            max-width: 100%;
+            max-height: 85vh;
+            border-radius: 8px;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        /* ── Responsive ──────────────────────────────── */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                transform: translateX(-100%);
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .menu-btn {
+                display: block;
+            }
+
+            .sidebar-overlay {
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 99;
+                display: none;
+            }
+
+            .sidebar-overlay.show {
+                display: block;
+            }
+        }
+
+        /* ── Scrollbar ───────────────────────────────── */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--border-hover);
         }
     </style>
-    <style id="cascade-style">
-        /* Dynamic styles will be injected here */
+    <style id="cascade-style-container">
+        /* Dynamic cascade styles injected here */
     </style>
 </head>
 
 <body>
+    <!-- Mobile sidebar overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
-    <div class="headers-container" id="tabsContainer">
-        <!-- Tabs injected here -->
-        <div class="cascade-tab">Loading...</div>
-    </div>
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">AG</div>
+            <div>
+                <div class="sidebar-title">Mission Control</div>
+                <div class="sidebar-subtitle">Antigravity Manager</div>
+            </div>
+        </div>
 
-    <div class="chat-container" id="chatContainer">
-        <div class="chat-content" id="chatContent">
-            <div class="loading">Waiting for connection...</div>
+        <div class="sidebar-section-label">Workspaces</div>
+
+        <div class="cascade-list" id="cascadeList">
+            <div class="empty-state" style="padding: 20px;">
+                <div style="font-size: 13px; color: var(--text-muted);">Scanning for Antigravity...</div>
+            </div>
+        </div>
+
+        <div class="sidebar-footer">
+            <div class="connection-badge" id="connectionBadge">
+                <div class="dot"></div>
+                <span>Connected</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main">
+        <!-- Top Bar -->
+        <div class="topbar">
+            <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+            <div class="topbar-title" id="topbarTitle">AG Mission Control</div>
+            <div class="status-badge idle" id="statusBadge">
+                <span id="statusText">Idle</span>
+            </div>
+            <div class="topbar-actions">
+                <button class="action-btn" onclick="takeScreenshot()" title="Screenshot">📸</button>
+                <button class="action-btn danger" onclick="stopAgent()" title="Stop">⏹ Stop</button>
+            </div>
+        </div>
+
+        <!-- Chat Area -->
+        <div class="chat-area" id="chatArea">
+            <div class="chat-content" id="chatContent">
+                <div class="empty-state">
+                    <div class="empty-state-icon">🚀</div>
+                    <div class="empty-state-title">AG Mission Control</div>
+                    <div class="empty-state-desc">
+                        Connect to Antigravity by launching it with<br>
+                        <code
+                            style="background: var(--bg-tertiary); padding: 4px 8px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; font-size: 12px;">antigravity . --remote-debugging-port=9000</code>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Input Bar -->
+        <div class="input-bar">
+            <div class="input-wrapper">
+                <textarea id="messageInput" placeholder="Send a message to Antigravity..." rows="1"></textarea>
+                <button class="send-btn" id="sendBtn" onclick="sendMessage()" disabled>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Screenshot Modal -->
+    <div class="modal-overlay" id="screenshotModal" onclick="closeScreenshot()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <img id="screenshotImg" src="" alt="Screenshot">
         </div>
     </div>
 
-    <div class="input-section">
-        <textarea id="messageInput" placeholder="Type a message..."></textarea>
-        <button id="sendBtn">Send</button>
-    </div>
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
 
     <script>
-        const tabsContainer = document.getElementById('tabsContainer');
-        const chatContent = document.getElementById('chatContent');
-        const chatContainer = document.getElementById('chatContainer');
-
+        // ── State ──────────────────────────────────────────
         let cascades = [];
         let currentCascadeId = null;
         let ws = null;
+        let currentPhase = 'idle';
 
+        // ── DOM refs ───────────────────────────────────────
+        const $ = id => document.getElementById(id);
+        const cascadeList = $('cascadeList');
+        const chatContent = $('chatContent');
+        const chatArea = $('chatArea');
+        const messageInput = $('messageInput');
+        const sendBtn = $('sendBtn');
+        const topbarTitle = $('topbarTitle');
+        const statusBadge = $('statusBadge');
+        const statusText = $('statusText');
+        const connectionBadge = $('connectionBadge');
+
+        // ── WebSocket ──────────────────────────────────────
         function connect() {
             ws = new WebSocket(`ws://${location.host}`);
+
+            ws.onopen = () => {
+                connectionBadge.classList.remove('disconnected');
+                connectionBadge.querySelector('span').textContent = 'Connected';
+            };
+
+            ws.onclose = () => {
+                connectionBadge.classList.add('disconnected');
+                connectionBadge.querySelector('span').textContent = 'Reconnecting...';
+                setTimeout(connect, 2000);
+            };
 
             ws.onmessage = (event) => {
                 const data = JSON.parse(event.data);
 
                 if (data.type === 'cascade_list') {
                     cascades = data.cascades;
-                    renderTabs();
-
-                    // Auto-select first if none selected
+                    renderCascadeList();
                     if (!currentCascadeId && cascades.length > 0) {
                         selectCascade(cascades[0].id);
                     }
@@ -170,124 +746,242 @@
 
                 if (data.type === 'snapshot_update') {
                     if (data.cascadeId === currentCascadeId) {
-                        updateContentOnly(currentCascadeId);
+                        updateChat(currentCascadeId);
                     }
                 }
+
+                if (data.type === 'phase_change') {
+                    updatePhase(data.phase, data.cascadeId);
+                }
             };
-
-            ws.onclose = () => setTimeout(connect, 2000);
         }
 
-        function renderTabs() {
-            tabsContainer.innerHTML = cascades.map(c => `
-                <div class="cascade-tab ${c.id === currentCascadeId ? 'active' : ''} ${c.active ? 'active-window' : ''}" 
-                     onclick="selectCascade('${c.id}')">
-                    <div class="status"></div>
-                    ${c.title || 'Untitled'}
-                </div>
-            `).join('');
-
+        // ── Cascade List ───────────────────────────────────
+        function renderCascadeList() {
             if (cascades.length === 0) {
-                tabsContainer.innerHTML = '<div class="cascade-tab">No chats found</div>';
+                cascadeList.innerHTML = `
+                    <div style="padding: 20px; text-align: center;">
+                        <div style="font-size: 24px; margin-bottom: 8px; opacity: 0.4;">🔍</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">No Antigravity instances found</div>
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Launch with --remote-debugging-port=9000</div>
+                    </div>
+                `;
+                return;
             }
+
+            cascadeList.innerHTML = cascades.map(c => {
+                const isActive = c.id === currentCascadeId;
+                const phase = currentPhase || 'idle';
+                const shortTitle = extractProjectName(c.title);
+                return `
+                    <div class="cascade-item ${isActive ? 'active' : ''}" onclick="selectCascade('${c.id}')">
+                        <div class="cascade-dot ${isActive ? phase : c.active ? 'idle' : 'idle'}"></div>
+                        <div class="cascade-info">
+                            <div class="cascade-name">${shortTitle}</div>
+                            <div class="cascade-meta">${c.window || ''}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
 
+        function extractProjectName(title) {
+            if (!title) return 'Untitled';
+            // "Antigravity-Shit-Chat - Antigravity - file.js" → "Antigravity-Shit-Chat"
+            const parts = title.split(' - ');
+            return parts[0] || title;
+        }
+
+        // ── Cascade Selection ──────────────────────────────
         function selectCascade(id) {
             currentCascadeId = id;
-            renderTabs();
+            renderCascadeList();
             loadCascade(id);
+            closeSidebar();
         }
 
         async function loadCascade(id) {
+            const cascade = cascades.find(c => c.id === id);
+            topbarTitle.textContent = cascade ? extractProjectName(cascade.title) : 'AG Mission Control';
+
             try {
-                // 1. Fetch Styles (Once)
                 const styleRes = await fetch(`/styles/${id}`);
                 if (styleRes.ok) {
                     const styleData = await styleRes.json();
-                    document.getElementById('cascade-style').textContent = `
-                        ${styleData.css}
-                        #cascade { 
-                            background: transparent !important; 
-                            color: white !important; 
-                        }
-                        #cascade .prose {
-                            --tw-prose-body: #e5e7eb !important;
-                            --tw-prose-headings: #f3f4f6 !important;
-                            --tw-prose-lead: #e5e7eb !important;
-                            --tw-prose-links: #60a5fa !important;
-                            --tw-prose-bold: #f3f4f6 !important;
-                            --tw-prose-counters: #9ca3af !important;
-                            --tw-prose-bullets: #d1d5db !important;
-                            --tw-prose-hr: #374151 !important;
-                            --tw-prose-quotes: #f3f4f6 !important;
-                            --tw-prose-quote-borders: #374151 !important;
-                            --tw-prose-captions: #9ca3af !important;
-                            --tw-prose-code: #f3f4f6 !important;
-                            --tw-prose-pre-code: #e5e7eb !important;
-                            --tw-prose-pre-bg: #1f2937 !important;
-                            --tw-prose-th-borders: #374151 !important;
-                            --tw-prose-td-borders: #374151 !important;
-                            color: #e5e7eb !important; /* Force color explicitly too */
-                        }
-                        /* Ensure code blocks are readable */
-                        pre, code { background: #111 !important; color: #ddd !important; }
-                    `;
+                    $('cascade-style-container').textContent = styleData.css;
                 }
-
-                // 2. Fetch Content
-                await updateContentOnly(id);
-            } catch (e) { console.error(e); }
+                await updateChat(id);
+            } catch (e) {
+                console.error(e);
+            }
         }
 
-        async function updateContentOnly(id) {
+        async function updateChat(id) {
             try {
                 const res = await fetch(`/snapshot/${id}`);
                 if (!res.ok) throw new Error('Failed');
                 const data = await res.json();
 
-                // Preserve Scroll
-                const isAtBottom = chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight < 50;
+                const isAtBottom = chatArea.scrollHeight - chatArea.scrollTop - chatArea.clientHeight < 80;
 
-                document.body.style.backgroundColor = data.bodyBg || '#1a1a1a';
-                chatContent.innerHTML = data.html;
-                // No inner style block needed anymore
+                chatContent.innerHTML = `<div class="chat-mirror">${data.html}</div>`;
 
-                if (isAtBottom) chatContainer.scrollTop = chatContainer.scrollHeight;
+                if (isAtBottom) {
+                    requestAnimationFrame(() => chatArea.scrollTop = chatArea.scrollHeight);
+                }
             } catch (e) { }
         }
 
+        // ── Phase / Status ─────────────────────────────────
+        function updatePhase(phase, cascadeId) {
+            if (cascadeId && cascadeId !== currentCascadeId) return;
+            currentPhase = phase;
+
+            statusBadge.className = `status-badge ${phase}`;
+            const labels = {
+                idle: '💤 Idle',
+                streaming: '⚡ Streaming',
+                complete: '✅ Complete'
+            };
+            statusText.textContent = labels[phase] || phase;
+            renderCascadeList();
+
+            // Adjust refresh rate based on phase
+            if (typeof startAutoRefresh === 'function') startAutoRefresh();
+        }
+
+        // Poll handled by auto-refresh and WebSocket events
+
+        // ── Send Message ───────────────────────────────────
         async function sendMessage() {
-            const input = document.getElementById('messageInput');
-            const text = input.value;
+            const text = messageInput.value.trim();
             if (!text || !currentCascadeId) return;
 
-            // Clear immediately to feel responsive
-            input.value = '';
+            messageInput.value = '';
+            messageInput.style.height = 'auto';
+            sendBtn.disabled = true;
+            showToast('📤 Sending...');
 
             try {
-                await fetch(`/send/${currentCascadeId}`, {
+                const res = await fetch(`/send/${currentCascadeId}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ message: text })
                 });
-                updateContentOnly(currentCascadeId); // Immediate refresh try
+
+                if (res.ok) {
+                    showToast('✅ Message sent');
+                    updatePhase('streaming', currentCascadeId);
+                    setTimeout(() => updateChat(currentCascadeId), 500);
+                } else {
+                    const err = await res.json();
+                    showToast(`❌ Failed: ${err.reason || 'Unknown error'}`);
+                    messageInput.value = text;
+                }
             } catch (e) {
-                console.error("Send failed", e);
-                input.value = text; // Restore on fail
-                alert("Failed to send message: " + e.message);
+                showToast(`❌ Error: ${e.message}`);
+                messageInput.value = text;
             }
         }
 
-        document.getElementById('sendBtn').onclick = sendMessage;
+        // ── Actions ────────────────────────────────────────
+        async function takeScreenshot() {
+            if (!currentCascadeId) return;
+            showToast('📸 Capturing...');
 
-        document.getElementById('messageInput').addEventListener('keydown', (e) => {
+            try {
+                const res = await fetch(`/screenshot/${currentCascadeId}`);
+                if (res.ok) {
+                    const blob = await res.blob();
+                    const url = URL.createObjectURL(blob);
+                    $('screenshotImg').src = url;
+                    $('screenshotModal').classList.add('show');
+                    showToast('📸 Screenshot captured');
+                } else {
+                    showToast('❌ Screenshot failed');
+                }
+            } catch (e) {
+                showToast('❌ ' + e.message);
+            }
+        }
+
+        function closeScreenshot() {
+            $('screenshotModal').classList.remove('show');
+        }
+
+        async function stopAgent() {
+            if (!currentCascadeId) return;
+            try {
+                const res = await fetch(`/stop/${currentCascadeId}`, { method: 'POST' });
+                if (res.ok) showToast('🛑 Stop signal sent');
+                else showToast('❌ Stop failed');
+            } catch (e) {
+                showToast('❌ ' + e.message);
+            }
+        }
+
+        // ── UI Helpers ─────────────────────────────────────
+        function showToast(message) {
+            const toast = $('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            clearTimeout(toast._timeout);
+            toast._timeout = setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        function toggleSidebar() {
+            $('sidebar').classList.toggle('open');
+            $('sidebarOverlay').classList.toggle('show');
+        }
+
+        function closeSidebar() {
+            $('sidebar').classList.remove('open');
+            $('sidebarOverlay').classList.remove('show');
+        }
+
+        // ── Input Handling ─────────────────────────────────
+        messageInput.addEventListener('input', () => {
+            sendBtn.disabled = !messageInput.value.trim();
+            // Auto-resize
+            messageInput.style.height = 'auto';
+            messageInput.style.height = Math.min(messageInput.scrollHeight, 120) + 'px';
+        });
+
+        messageInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 sendMessage();
             }
         });
 
+        // Keyboard shortcut: Escape to close modals
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeScreenshot();
+                closeSidebar();
+            }
+        });
+
+        // ── Auto-refresh when streaming ───────────────────
+        let refreshTimer = null;
+
+        function startAutoRefresh() {
+            stopAutoRefresh();
+            refreshTimer = setInterval(() => {
+                if (currentCascadeId) updateChat(currentCascadeId);
+            }, currentPhase === 'streaming' ? 2000 : 5000);
+        }
+
+        function stopAutoRefresh() {
+            if (refreshTimer) clearInterval(refreshTimer);
+        }
+
+        // ── Init ───────────────────────────────────────────
         connect();
+        startAutoRefresh();
+
+        // Focus input on load
+        messageInput.focus();
     </script>
 </body>
 
