@@ -111,16 +111,15 @@ export class TelegramBot {
         this.bot.command('help', async (ctx) => {
             await ctx.reply(
                 '📖 *Commands*\n\n' +
-                '/status — Current agent status + last message\n' +
-                '/screenshot — Take screenshot of IDE\n' +
-                '/cascades — List connected cascades\n' +
-                '/select — Select active cascade\n' +
-                '/stop — Send stop signal\n' +
-                '/autoaccept — Toggle auto-approval\n' +
+                '/project — Select project to work with\n' +
+                '/status — Current agent status\n' +
+                '/screenshot — Capture IDE screenshot\n' +
+                '/stop — Stop running task\n' +
+                '/autoaccept — Toggle auto\\-approval\n' +
+                '/probe — DOM diagnostic\n' +
                 '/help — This message\n\n' +
-                '💬 *Natural Language*\n' +
-                'Just type any message and it will be sent to Antigravity as a prompt.',
-                { parse_mode: 'Markdown' }
+                '💬 Just type any message to send it as a prompt\\.',
+                { parse_mode: 'MarkdownV2' }
             );
         });
 
@@ -171,40 +170,88 @@ export class TelegramBot {
             }
         });
 
-        // /cascades
-        this.bot.command('cascades', async (ctx) => {
+        // /project, /cascades — Remoat-style project selector
+        const projectCmd = async (ctx, page = 0) => {
             const list = this.cdp.getCascadeList();
             if (list.length === 0) {
-                await ctx.reply('❌ No cascades connected');
+                await ctx.reply('<b>📁 Projects</b>\n\nNo Antigravity instances found.\n\nLaunch with <code>--remote-debugging-port=9000</code>', { parse_mode: 'HTML' });
                 return;
             }
 
-            const keyboard = new InlineKeyboard();
-            for (const c of list) {
-                const icon = c.active ? '🟢' : '⚪';
-                const current = c.id === this._activeCascadeId ? ' ✓' : '';
-                keyboard.text(`${icon} ${c.title}${current}`, `select:${c.id}`).row();
+            const ITEMS_PER_PAGE = 10;
+            const totalPages = Math.max(1, Math.ceil(list.length / ITEMS_PER_PAGE));
+            const safePage = Math.max(0, Math.min(page, totalPages - 1));
+            const start = safePage * ITEMS_PER_PAGE;
+            const pageItems = list.slice(start, start + ITEMS_PER_PAGE);
+
+            // Phase indicators
+            const phaseIcon = (id) => {
+                const state = this.monitor?._getState(id);
+                const p = state?.phase || 'idle';
+                return { idle: '💤', streaming: '⚡', complete: '✅', error: '❌' }[p] || '❓';
+            };
+
+            // Build rich text
+            let text = '<b>📁 Projects</b>\n\nSelect a project to work with:\n\n';
+            text += pageItems.map((c, i) => {
+                const num = start + i + 1;
+                const selected = c.id === this._activeCascadeId ? ' ← current' : '';
+                const name = this._shortTitle(c.title);
+                const icon = phaseIcon(c.id);
+                return `${num}. ${icon} <b>${name}</b>${selected}`;
+            }).join('\n');
+
+            if (totalPages > 1) {
+                text += `\n\n<i>Page ${safePage + 1} / ${totalPages} (${list.length} projects)</i>`;
             }
 
-            await ctx.reply('Select a cascade:', { reply_markup: keyboard });
-        });
+            // Build keyboard — one button per project
+            const keyboard = new InlineKeyboard();
+            for (const c of pageItems) {
+                const label = this._shortTitle(c.title);
+                const current = c.id === this._activeCascadeId ? ' ✓' : '';
+                const icon = phaseIcon(c.id);
+                const shortLabel = label.length > 30 ? label.substring(0, 27) + '...' : label;
+                keyboard.text(`${icon} ${shortLabel}${current}`, `select:${c.id}`).row();
+            }
 
-        // /select (alias for /cascades)
-        this.bot.command('select', async (ctx) => {
-            await ctx.api.sendMessage(ctx.chat.id, '/cascades');
-        });
+            // Pagination buttons
+            if (totalPages > 1) {
+                if (safePage > 0) keyboard.text('◀ Prev', `project_page:${safePage - 1}`);
+                if (safePage < totalPages - 1) keyboard.text('Next ▶', `project_page:${safePage + 1}`);
+                keyboard.row();
+            }
 
-        // Inline button: cascade selection
+            await ctx.reply(text, { parse_mode: 'HTML', reply_markup: keyboard });
+        };
+
+        this.bot.command('project', projectCmd);
+        this.bot.command('cascades', projectCmd);
+        this.bot.command('select', projectCmd);
+
+        // Inline button: project selection
         this.bot.callbackQuery(/^select:(.+)$/, async (ctx) => {
             const cascadeId = ctx.match[1];
             const cascade = this.cdp.cascades.get(cascadeId);
             if (cascade) {
                 this._activeCascadeId = cascadeId;
-                await ctx.answerCallbackQuery({ text: `Selected: ${cascade.metadata.chatTitle}` });
-                await ctx.editMessageText(`✅ Active cascade: ${cascade.metadata.chatTitle}`);
+                const name = this._shortTitle(cascade.metadata.chatTitle);
+                await ctx.answerCallbackQuery({ text: `Switched to: ${name}` });
+                await ctx.editMessageText(
+                    `✅ <b>Active project: ${name}</b>\n\nAll messages will now go to this workspace.\n\n💡 Just type your prompt to send it.`,
+                    { parse_mode: 'HTML' }
+                );
             } else {
-                await ctx.answerCallbackQuery({ text: 'Cascade not found' });
+                await ctx.answerCallbackQuery({ text: 'Project disconnected' });
             }
+        });
+
+        // Pagination callback
+        this.bot.callbackQuery(/^project_page:(\d+)$/, async (ctx) => {
+            const page = parseInt(ctx.match[1], 10);
+            await ctx.answerCallbackQuery();
+            await ctx.deleteMessage();
+            await projectCmd(ctx, page);
         });
 
         // /stop
